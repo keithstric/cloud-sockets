@@ -1,13 +1,21 @@
 {
   "name": "cloud-sockets",
   "version": "1.0.0",
-  "description": "",
+  "description": "An express middleware providing a WebSocket server",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/keithstric/cloud-sockets"
+  },
+  "keywords": ["WebSockets", "ws", "express"],
+  "author": {
+    "email": "keithstric@gmail.com",
+    "name": "Keith Strickland",
+    "url": "http://keithstric.me"
+  },
   "license": "ISC",
   "dependencies": {
     "ws": "^7.2.1"

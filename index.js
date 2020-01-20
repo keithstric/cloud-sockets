@@ -4,13 +4,14 @@ const Server = require('ws').Server;
 const events = require('events');
 
 // Global event emitter
+// Define events in your code that will send a websocket message
 global.socketEmitter = new events.EventEmitter();
 // messages awaiting acknowledgement. key is a message uuid value is the sent message
 const awaitingAck = {};
 // channel maps. channelMaps' key = channel, value is a Map<string, WebSocket[]> whose
 // key is a subscription id and value is an array of WebSocket connections
 const channelMaps = {};
-// connections map, key is a WebSocket connection, value is an object whose
+// connections map: key is a WebSocket connection, value is an object whose
 // key is a channel and value is an array of subscription ids
 // Object is structured like {channel: [subId]}
 const connectionsMap = new Map();
