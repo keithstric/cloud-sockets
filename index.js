@@ -113,16 +113,16 @@ function subscribeChannel(ws, message) {
  * @param {string} subId
  */
 function updateChannelMap(ws, channel, subId) {
-	let subMap = channelMaps[channel];
-	if (!subMap) {
-		subMap = new Map();
+	let channelMap = channelMaps[channel];
+	if (!channelMap) {
+		channelMap = new Map();
 	}
 	let subConns = [];
-	if (subMap.has(subId)) {
-		subConns = subMap.get(subId);
+	if (channelMap.has(subId)) {
+		subConns = channelMap.get(subId);
 	}
 	subConns.push(ws);
-	channelMaps[channel] = subMap.set(subId, subConns);
+	channelMaps[channel] = channelMap.set(subId, subConns);
 	createEventListener(channel);
 	return channelMaps[chanel];
 }
@@ -209,7 +209,11 @@ function createEventListener(channel) {
 }
 /**
  * Event handler to send messages
+ * @listens global.socketEmitter
  */
 function eventHandler(evt) {
-
+	const payload = evt.data;
+	if (payload.subId && payload.channel) {
+		this.send(payload);
+	}
 }
