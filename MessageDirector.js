@@ -20,7 +20,7 @@ class MessageDirector {
 		 * @todo replace the object with a map because we need an
 		 * acknowledgement from every WebSocket that a message was
 		 * send to, not just a single acknowledgement
-		 * @type {Map<WebSocket, <subId: string>[]}
+		 * @type {Map<WebSocket, <subId: string>[]>}
 		 */
 		this.awaitingAck = new Map();
 	}
