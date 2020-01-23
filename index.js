@@ -1,219 +1,186 @@
-
-'use strict';
+'use strict'
 const Server = require('ws').Server;
-const events = require('events');
+const EventEmitter = require('events').EventEmitter;
+const MessageDirector = require('./MessageDirector');
+const ChannelManager = require('./ChannelManager');
 
-// Global event emitter
-// Define events in your code that will send a websocket message
-global.socketEmitter = new events.EventEmitter();
-// messages awaiting acknowledgement. key is a message uuid value is the sent message
-const awaitingAck = {};
-// channel maps. channelMaps' key = channel, value is a Map<string, WebSocket[]> whose
-// key is a subscription id and value is an array of WebSocket connections
-const channelMaps = {};
-// connections map: key is a WebSocket connection, value is an object whose
-// key is a channel and value is an array of subscription ids
-// Object is structured like {channel: [subId]}
+global.socketEmitter = new EventEmitter();
+/**
+ * Map of connections. key is a WebSocket, value is an object whose
+ * key is a subscribed to channel and value is an array of subscription ids
+ * @type {Map<WebSocket, {<channel: string>: string[]}}
+ */
 const connectionsMap = new Map();
+/**
+ * WebSocket server configuration
+ */
+let wsConfig = {
+	server: global.server,
+	port: 30010
+};
+/**
+ * default cloud-ws options
+ */
+let options = {
+	/** 
+	 * message types which require an acknowledgement 
+	 * @type {string[]}
+	 */
+	ackMessageTypes: ['announce'],
+	/** 
+	 * custom message handlers. key is the message type, value is the handler function 
+	 * the handler function will receive 2 properties, the WebSocket and message. If
+	 * an acknowledgement is required, be sure your function returns a message
+	 * @type {key: {string}, value: {function}}
+	 */
+	customMsgHandlers: {},
+	/** 
+	 * message types which will be broadcast to all connections 
+	 * @type {string[]}
+	 */
+	broadcastMessageTypes: [],
+	/**
+	 * Optional: custom PubSub listener
+	 * @type {function}
+	 */
+	pubsubListener: null,
+	/**
+	 * Optional: custom PubSub publisher. Will provide
+	 * 3 arguments to function call: channel, subscriptionId and 
+	 * payload (non stringified)
+	 * @type {function}
+	 */
+	pubsubPublisher: null,
+	msgResendDelay: 60000
+};
+/**
+ * Websocket server
+ * @type {Server}
+ */
+let wsServer;
+/**
+ * Message director
+ * @type {MessageDirector}
+ */
+let msgDirector;
+/**
+ * Channel Manager
+ * @type {ChannelManager}
+ */
+let channelMgr;
 
-export default function(config) {
-	const wsServer = new Server(config);
+module.exports = function socketServer(serverConfig, cloudWsOptions) {
+	options = {...options, ...cloudWsOptions};
+	wsConfig = {...wsConfig, ...serverConfig};
+	wsServer = new Server(wsConfig);
+	console.log(`WebSocket server fired up on port ${wsServer.address().port}`);
+	channelMgr = new ChannelManager();
+	msgDirector = new MessageDirector(options, channelMgr);
 
-	wsServer.on('connection', (ws, req) => {
-
-		ws.on('message', (ws, evt) => {
-			const msg = evt.data;
-			if (msg && typeof msg === 'string') {
-				msg = JSON.parse();
-			}
-			let ack = {type: 'error', value: 'Message type not supported', msg: msg};
-			if (msg.type && msg.type === 'subscribe') {
-				ack = subscribeChannel(ws, msg);
-				send(ws, ack);
-			}else if (msg.type && msg.type === 'ack') {
-				updateAck(msg.id);
-			}else if (msg.type && msg.type === 'announce') {
-				ack = announce(msg.channel);
-				send(ws, ack);
-			}else if (msg.type && msg.type === 'user') {
-				ack = updateUser(ws, msg);
-				send(ws, ack);
-			}
-		});
-		ws.on('close', (ws) => {
-			cleanupConnections(ws);
-		});
-		ws.on('error', (err) => {})
-
-		if (!connectionsMap.has(ws)) {
-			connectionsMap.set(ws, {});
-		}
-	});
-
+	setupListeners();
 	return function(req, res, next) {
 		next();
 	}
 }
 /**
- * Create an uuid
- * @returns {string}
+ * Sets up the socket server event listeners
  */
-function uuidv4() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
-/**
- * Send a payload to the supplied WebSocket and add the message to the
- * awaitingAck object
- * @param {WebSocket} ws
- * @param {any} payload This must be an object that may/may not be stringified
- */
-function send(ws, payload) {
-	let updatedPayload = payload;
-	if (typeof payload === 'string') {
-		updatedPayload = JSON.parse(payload);
-	}
-	updatedPayload.id = uuidv4();
-	let msg = updatedPayload;
-	msg = JSON.stringify(updatedPayload);
-	ws.send(msg);
-	awaitingAck[updatedPayload.id] = updatedPayload;
-}
-/**
- * Subscribe to a channel. Adds the provided connection to a subscription
- * id's WebSocket connections
- * @param {WebSocket} ws
- * @param {any} message
- */
-function subscribeChannel(ws, message) {
-	let ackMessage = {type: 'ack'};
-	if (ws && message) {
-		let msg = message;
-		if (typeof msg === 'string') {
-			msg = JSON.parse(message);
+function setupListeners() {
+	wsServer.on('connection', (ws, req) => {
+		if (!connectionsMap.has(ws)) {
+			connectionsMap.set(ws, {});
+			msgDirector.sendMessage(ws, {
+				type: 'welcome', 
+				message: 'Welcome to the cloud-sockets WebSocket', 
+				numConnections: connectionsMap.size
+			});
 		}
-		if (msg.subId && msg.channel) {
-			let subMap = updateChannelMap(ws, msg.channel, msg.subId);
-			let subConns = subMap.get(msg.subId);
-			ackMessage = {subId: msg.subId, channel: msg.channel, type: 'ack', numConnections: subConns.length};
-			updateConnectionObj(ws, msg.channel, msg.subId);
-		}else{
-			ackMessage = {type: 'error', value: 'No subId and/or channel property provided with subscription'};
-		}
-	}
-	return ackMessage;
+
+		ws.on('message', (message) => {
+			msgDirector.handleMsg(ws, message);
+			const msg = JSON.parse(message);
+			if (msg.type === 'subscribe') {
+				onSubscribe(ws, msg);
+			}else if (msg.type === 'unsubscribe') {
+				onUnsubscribe(ws, msg);
+			}else if (msg.type === 'getInfo') {
+				getInfo(ws, msg);
+			}
+		});
+		ws.on('error', (err) => {
+			console.error(err);
+			cleanupConnections(ws);
+		});
+		ws.on('close', (ws) => {
+			cleanupConnections(ws);
+		});
+	});
 }
 /**
- * Update/Create a channel map. Will add the ws to the channel's map of connections for
- * the provided subId
- * @param {WebSocket} ws
- * @param {string} channel
- * @param {string} subId
- */
-function updateChannelMap(ws, channel, subId) {
-	let channelMap = channelMaps[channel];
-	if (!channelMap) {
-		channelMap = new Map();
-	}
-	let subConns = [];
-	if (channelMap.has(subId)) {
-		subConns = channelMap.get(subId);
-	}
-	subConns.push(ws);
-	channelMaps[channel] = channelMap.set(subId, subConns);
-	createEventListener(channel);
-	return channelMaps[chanel];
-}
-/**
- * Will update connection's object of connected channels in the connections map
- * @param {WebSocket} ws
- * @param {string} channel
- * @param {string} subId
- */
-function updateConnectionObj(ws, channel, subId) {
-	let returnVal = null;
-	if (ws && channel) {
-		let connectionObj = connectionsMap.get(ws);
-		if (connectionObj && connectionObj[channel]) {
-			connectionObj[channel] = [...connectionObj[channel], subId];
-		}else{
-			connectionObj[channel] = [subId];
-		}
-		returnVal = connectionObj[channel];
-	}
-	return returnVal;
-}
-/**
- * Remove the provided connection from the connectionsMap then cleanup
- * the connection from the channelMaps
- * @param {WebSocket} ws
+ * Cleans up the connections after an error or close connection
  */
 function cleanupConnections(ws) {
 	const connObj = connectionsMap.get(ws);
-	const channelSubs = [];
 	if (connObj) {
 		const channelKeys = Object.keys(connObj);
-		channelKeys.forEach((key) => {
-			const subs = channelMaps[key];
-			channelSubs.push({channel: key, subs: subs});
-			connectionsMap.delete(ws);
+		const acks = [];
+		channelKeys.forEach((channel) => {
+			acks.push(channelMgr.unsubscribeChannel(ws, channel));
 		});
-		cleanupChannels(ws, channelSubs);
+		connectionsMap.delete(ws);
 	}
 }
 /**
- * Remove the provided connection from the channel subscription connections
- * @param {WebSocket} ws
- * @param {[{channel: string, subs: [string]}]} channelSubs
+ * Adds subscriptions to the connection object for the provided WebSocket
+ * @param {WebSocket} ws 
+ * @param {any} msg 
  */
-function cleanupChannels(ws, channelSubs) {
-	if (channelSubs && channelSubs.length) {
-		channelSubs.forEach((channelObj) => {
-			const channelMap = channelMaps[channelObj.channel];
-			channelObj.subs.forEach((sub) => {
-				if (channelMap.has(sub)) {
-					const conns = channelMap.get(sub);
-					const connIdx = conns.indexOf(ws);
-					if (connIdx > -1) {
-						conns.slice(connIdx, 1);
-						if (conns.length) {
-							channelMap.set(sub, conns);
-							channelMaps[channelObj.channel] = channelMap;
-						}else{
-							delete channelMaps[channelObj.channel];
-							cleanupEventListeners(channelObj.channel);
-						}
-					}
+function onSubscribe(ws, msg) {
+	if (ws && msg) {
+		const {channel, subId} = msg;
+		const connObj = connectionsMap.get(ws);
+		if (connObj && connObj[channel]) {
+			connObj[channel] = [...connObj[channel], subId];
+		}else{
+			connObj[channel] = [subId]
+		}
+	}
+}
+/**
+ * Removes subscriptions from the connection object for the provided WebSocket
+ * @param {WebSocket} ws 
+ * @param {any} msg 
+ */
+function onUnsubscribe(ws, msg) {
+	if (ws && msg) {
+		const {channel, subId} = msg;
+		const connObj = connectionsMap.get(ws);
+		if (connObj && connObj[channel]) {
+			if (subId) {
+				const subIdx = connObj[channel].indexOf(subId);
+				if (subIdx > -1) {
+					connObj[channel].splice(subIdx, 1);
 				}
-			});
-		});
+			}else{
+				delete connObj[channel];
+			}
+		}
 	}
 }
 /**
- * Cleanup the event listeners for the provided channel
- * @param {string} channel
+ * Gathers information from the MessageHandler and ChannelManager then
+ * includes information about the configuration and connections
+ * and sends it back to the requestor
+ * @param {WebSocket} ws 
+ * @param {any} msg 
  */
-function cleanupEventListeners(channel) {
-	global.socketEmitter.off(channel, eventHandler);
-}
-/**
- * Create an event listener for the subscription
- * @param {string} channel
- */
-function createEventListener(channel) {
-	if (!global.socketEmitter.listeners(channel)) {
-		global.socketEmitter.on(channel, eventHandler);
-	}
-}
-/**
- * Event handler to send messages
- * @listens global.socketEmitter
- */
-function eventHandler(evt) {
-	const payload = evt.data;
-	if (payload.subId && payload.channel) {
-		this.send(payload);
-	}
+function getInfo(ws, msg) {
+	const info = msgDirector.getInfo(ws, msg.channel);
+	info.totalConnections = connectionsMap.size;
+	info.type = 'getInfo';
+	info.customPubSub = !!(options.pubsubListener && options.pubsubPublisher);
+	info.ackMessageTypes = options.ackMessageTypes;
+	info.customMsgHandlers = Object.keys(options.customMsgHandlers);
+	info.msgResendDelay = options.msgResendDelay + 'ms';
+	msgDirector.sendMessage(ws, info);
 }
