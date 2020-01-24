@@ -11,15 +11,13 @@ class MessageDirector {
 	 * @returns {MessageDirector}
 	 */
 	constructor(options, channelMgr) {
-		this.acknowledgementTypes = [...options.ackMessageTypes, 'announce'];
+		this.acknowledgementTypes = [...options.ackMessageTypes];
 		this.customMessageHandlers = {...options.customMessageHandlers};
 		this.awaitingRetryDelay = options.msgResendDelay;
 		this.channelMgr = channelMgr || new ChannelManager();
-		this.customPubSubPublisher = options.pubsubPublisher;
+		this.pubsubPublisher = options.pubsubPublisher;
+		this.pubsubTopic = options.pubsubTopic;
 		/**
-		 * @todo replace the object with a map because we need an
-		 * acknowledgement from every WebSocket that a message was
-		 * send to, not just a single acknowledgement
 		 * @type {Map<WebSocket, <subId: string>[]>}
 		 */
 		this.awaitingAck = new Map();
@@ -40,17 +38,19 @@ class MessageDirector {
 					this._subscribe(ws, msg.channel, msg.subId);
 					break;
 				case 'ack':
-					this._removeAwaitingAck(msg.ackId);
+					this._removeAwaitingAck(ws, msg);
 					break;
 				case 'unsubscribe':
 					this._unsubscribe(ws, msg.channel, msg.subId);
 					break;
 				case 'announce':
-					this._announce(msg, msg.channel, msg.subId);
+					this.announce(msg, msg.channel, msg.subId);
 					break;
 				case 'user':
 					break;
 				case 'getInfo':
+					break;
+				case 'getInfoDetail':
 					break;
 				default:
 					if (msg.type && this.customMessageHandlers[msg.type]) {
@@ -90,7 +90,7 @@ class MessageDirector {
 	 * @param {string} channel?
 	 * @param {string} subId?
 	 */
-	_announce(msg, channel, subId) {
+	announce(msg, channel, subId) {
 		let conns = [];
 		if (channel) {
 			if (subId) {
@@ -102,7 +102,12 @@ class MessageDirector {
 			conns = this.channelMgr.getAllConnections();
 		}
 		conns.forEach((ws) => {
-			this.sendMessage(ws, msg);
+			if (this.pubsubPublisher) {
+				const dataBuffer = Buffer.from(this._formatMessage(msg));
+				this.pubsubPublisher(this.pubsubTopic, dataBuffer);
+			}else{
+				this.sendMessage(ws, msg);
+			}
 		});
 	}
 	/**
@@ -112,11 +117,34 @@ class MessageDirector {
 	 * all channels.
 	 * @param {string} channel?
 	 */
-	getInfo(ws, channel) {
-		const info = this.channelMgr.getInfo(channel);
-		info.awaitingAck = Object.keys(this.awaitingAck);
-		info.awaitingAckCount = info.awaitingAck.length;
+	getInfoDetail(channel) {
+		const channelMgrInfo = this.channelMgr.getInfoDetail(channel);
+		const info = {...this.getInfo(channel), ...channelMgrInfo};
+		// const info = this.getInfo(channel);
+		// info.channelInfo = channelMgrInfo.channelInfo;
+		let awaitingMsgArr = [];
+		const awaitingKeys = [...this.awaitingAck.keys()];
+		awaitingKeys.forEach((ws) => {
+			const awaitingMsgs = this.awaitingAck.get(ws);
+			const awaitingIds = awaitingMsgs.map(awaitingObj => awaitingObj.msg.id);
+			awaitingMsgArr = [...awaitingMsgArr, ...awaitingIds];
+		});
+		info.messageInfo.awaitingMessages = awaitingMsgArr;
 		return info;
+	}
+
+	getInfo(channel) {
+		let channelInfo = this.channelMgr.getInfo(channel);
+		channelInfo.messageInfo = {};
+		channelInfo.messageInfo.totalConnectionsAwaitingAck = this.awaitingAck.size;
+		let totalAwaitingMsgs = 0;
+		const awaitingKeys = [...this.awaitingAck.keys()];
+		awaitingKeys.forEach((ws) => {
+			const awaitingMsgsLen = this.awaitingAck.get(ws).length;
+			totalAwaitingMsgs = totalAwaitingMsgs + awaitingMsgsLen;
+		});
+		channelInfo.messageInfo.totalAwaitingMsgs = totalAwaitingMsgs;
+		return channelInfo;
 	}
 	/**
 	 * Send a payload to the supplied WebSocket and add the message to the
@@ -127,16 +155,10 @@ class MessageDirector {
 	sendMessage(ws, msg) {
 		if (ws && msg) {
 			let msgObj = msg;
-			if (typeof msg === 'string') {
+			if (msg && typeof msg === 'string') {
 				msgObj = JSON.parse(msg);
 			}
-			if (!msgObj.isRetry) {
-				msgObj.id = this.uuidv4();
-				msgObj.sentDateTime = new Date().toISOString();
-			}else{
-				msgObj.lastRetryDateTime = new Date().toISOString();
-			}
-			const message = JSON.stringify(msgObj);
+			const message = this._formatMessage(msg);
 			ws.send(message);
 			if (this.acknowledgementTypes.indexOf(msgObj.type) > -1 && !msgObj.isRetry) {
 				this._addAwaitingAck(ws, msgObj);
@@ -153,14 +175,17 @@ class MessageDirector {
 	_addAwaitingAck(ws, msg) {
 		if (ws && msg) {
 			const awaitingObj = {
-				ws: ws,
 				timer: setInterval(() => {
 					msg.isRetry = true;
 					this.sendMessage(ws, msg);
 				}, this.awaitingRetryDelay),
 				msg: msg
 			}
-			this.awaitingAck[msg.id] = awaitingObj;
+			let wsMsgs = [awaitingObj];
+			if (this.awaitingAck.has(ws)) {
+				wsMsgs = this.awaitingAck.get(ws);
+			}
+			this.awaitingAck.set(ws, wsMsgs);
 		}
 	}
 	/**
@@ -168,12 +193,27 @@ class MessageDirector {
 	 * the interval for resending the message
 	 * @param {string} ackId 
 	 */
-	_removeAwaitingAck(ackId) {
-		if (ackId) {
-			const awaitingObj = this.awaitingAck[ackId];
-			if (awaitingObj) {
-				clearInterval(awaitingObj.timer);
-				delete this.awaitingAck[ackId]
+	_removeAwaitingAck(ws, msg) {
+		if (ws && msg) {
+			if (this.awaitingAck.has(ws)) {
+				let wsMsgs = this.awaitingAck.get(ws);
+				let awaitingObjIdx = -1;
+				const awaitingObj = wsMsgs.find((awaitingObj, idx) => {
+					if (awaitingObj.msg.id === msg.id) {
+						awaitingObjIdx = idx;
+						return true;
+					}
+					return false;
+				});
+				if (awaitingObjIdx > -1) {
+					clearInterval(awaitingObj.timer);
+					wsMsgs.splice(awaitingObjIdx, 1);
+					if (!wsMsgs.length) {
+						this.awaitingAck.delete(ws);
+					}else{
+						this.awaitingAck.set(ws, wsMsgs);
+					}
+				}
 			}
 		}
 	}
@@ -186,6 +226,24 @@ class MessageDirector {
 			var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
 			return v.toString(16);
 		});
+	}
+	/**
+	 * Gets a message ready for sending. Adds an id and sentDateTime properties
+	 * then stringifies it.
+	 * @param {any} msg 
+	 */
+	_formatMessage(msg) {
+		let msgObj = msg;
+		if (typeof msg === 'string') {
+			msgObj = JSON.parse(msg);
+		}
+		if (!msgObj.isRetry) {
+			msgObj.id = this.uuidv4();
+			msgObj.sentDateTime = new Date().toISOString();
+		}else{
+			msgObj.lastRetryDateTime = new Date().toISOString();
+		}
+		return JSON.stringify(msgObj);
 	}
 }
 

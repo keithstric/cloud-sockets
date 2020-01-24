@@ -1,3 +1,10 @@
+/**
+ * This class manages the channel subscriptions which is at the heart
+ * of the cloud-sockets project. It is responsible for maintaining an
+ * object of channels whose value is a map with a key of a subscription id
+ * and a value that is an array of WebSocket.
+ * @class {ChannelManager}
+ */
 class ChannelManager {
 
 	constructor() {
@@ -37,7 +44,7 @@ class ChannelManager {
 		return [];
 	}
 	/**
-	 * Get all the connections in a channel
+	 * Get all the connections for a specific channel
 	 * @param {string} channel
 	 * @returns {WebSocket[]}
 	 */
@@ -179,19 +186,38 @@ class ChannelManager {
 	 * @param {string} channel?
 	 * @returns {type: string, {[<key: string>], {subId: string, numConnections: number}[]}}  
 	 */
-	getInfo(channel) {
-		let payload = {
-			type: 'connectionInfo',
-			channelInfo: {}
-		};
+	getInfoDetail(channel) {
+		let payload = this.getInfo(channel);
+		payload.channelInfo.channels = {};
 		if (channel) {
-			payload.channelInfo[channel] = this._getChannelInfo(channel);
+			payload.channelInfo.channels[channel] = this._getChannelInfo(channel);
 		}else{
-			Object.keys(this.channelMaps).forEach((channel) => {
-				payload.channelInfo[channel] = this._getChannelInfo(channel);
+			const channels = Object.keys(this.channelMaps);
+			channels.forEach((channel) => {
+				payload.channelInfo.channels[channel] = this._getChannelInfo(channel);
 			});
 		}
 		return payload;
+	}
+
+	getInfo(channel) {
+		let payload = {
+			channelInfo: {}
+		};
+		const channels = Object.keys(this.channelMaps);
+		payload.channelInfo.totalConnections = this.getAllConnections().length;
+		payload.channelInfo.totalChannels = channels ? channels.length : 0;
+		if (channel) {
+			payload.channelInfo.channelConnectionCount = this.getChannelConnections(channel).length;
+			payload.channelInfo.channelSubscriptions = this.getChannelMap(channel).size;
+		}
+		let subCount = 0;
+		channels.forEach((channel) => {
+			const channelMap = this.channelMaps[channel];
+			subCount = subCount + channelMap.size;
+		});
+		payload.channelInfo.totalSubscriptions = subCount;
+		return payload
 	}
 	/**
 	 * provided a channel will return an array of subscription names and the number

@@ -51,6 +51,7 @@ let options = {
 	 * @type {function}
 	 */
 	pubsubPublisher: null,
+	pubsubTopic: null,
 	msgResendDelay: 60000
 };
 /**
@@ -103,6 +104,8 @@ function setupListeners() {
 				onSubscribe(ws, msg);
 			}else if (msg.type === 'unsubscribe') {
 				onUnsubscribe(ws, msg);
+			}else if (msg.type === 'getInfoDetail') {
+				getInfoDetail(ws, msg);
 			}else if (msg.type === 'getInfo') {
 				getInfo(ws, msg);
 			}
@@ -115,6 +118,10 @@ function setupListeners() {
 			cleanupConnections(ws);
 		});
 	});
+
+	if (options.pubsubListener) {
+		this.options.pubsubListener();
+	}
 }
 /**
  * Cleans up the connections after an error or close connection
@@ -144,6 +151,7 @@ function onSubscribe(ws, msg) {
 		}else{
 			connObj[channel] = [subId]
 		}
+		createEventListener(channel);
 	}
 }
 /**
@@ -165,6 +173,10 @@ function onUnsubscribe(ws, msg) {
 				delete connObj[channel];
 			}
 		}
+		const channelConns = channelMgr.getChannelConnections(channel);
+		if (channelConns && !channelConns.length) {
+			global.socketEmitter.removeListener(channel, eventHandler);
+		}
 	}
 }
 /**
@@ -174,13 +186,64 @@ function onUnsubscribe(ws, msg) {
  * @param {WebSocket} ws 
  * @param {any} msg 
  */
-function getInfo(ws, msg) {
-	const info = msgDirector.getInfo(ws, msg.channel);
-	info.totalConnections = connectionsMap.size;
-	info.type = 'getInfo';
-	info.customPubSub = !!(options.pubsubListener && options.pubsubPublisher);
-	info.ackMessageTypes = options.ackMessageTypes;
-	info.customMsgHandlers = Object.keys(options.customMsgHandlers);
-	info.msgResendDelay = options.msgResendDelay + 'ms';
+function getInfoDetail(ws, msg) {
+	let info = {
+		serverInfo: {},
+		connectionInfo: {}
+	};
+	info.connectionInfo.totalConnections = connectionsMap.size;
+	info.type = 'getInfoDetail';
+	info.serverInfo.customPubSub = !!(options.pubsubListener && options.pubsubPublisher);
+	info.serverInfo.ackMessageTypes = options.ackMessageTypes;
+	info.serverInfo.customMsgHandlers = Object.keys(options.customMsgHandlers);
+	info.serverInfo.msgResendDelay = options.msgResendDelay + 'ms';
+	info.serverInfo.serverPort = wsServer.address.port;
+	info = {...info, ...msgDirector.getInfoDetail(msg.channel)}
 	msgDirector.sendMessage(ws, info);
+}
+
+function getInfo(ws, msg) {
+	let info = {
+		serverInfo: {},
+		connectionInfo: {}
+	};
+	info.connectionInfo.totalConnections = connectionsMap.size;
+	info.type = 'getInfoDetail';
+	info.serverInfo.customPubSub = !!(options.pubsubListener && options.pubsubPublisher);
+	info.serverInfo.ackMessageTypes = options.ackMessageTypes;
+	info.serverInfo.customMsgHandlers = Object.keys(options.customMsgHandlers);
+	info.serverInfo.msgResendDelay = options.msgResendDelay + 'ms';
+	info.serverInfo.serverPort = wsServer.address.port;
+	info = {...info, ...msgDirector.getInfo(msg.channel)}
+	msgDirector.sendMessage(ws, info);
+}
+/**
+ * Creates an event listener for the defined type. Type comes from the
+ * subscription message from the client.
+ * @param {string} channel 
+ */
+function createEventListener(channel) {
+	const listenerCount = global.socketEmitter.listenerCount(channel);
+	if (listenerCount === 0) {
+		global.socketEmitter.addListener(channel, eventHandler);
+		// console.log(`createEventListener, created listener for ${channel}, we now have ${global.websocketEmitter.listenerCount(channel)} listeners`);
+	}
+}
+/**
+ * Event handler to send messages. These parameters should be provided
+ * by the emit call
+ * @param {string} channel
+ * @param {string} subId
+ * @param {string} type
+ * @param {any} payload - The payload produced when the event is emitted
+ * @listens global.socketEmitter
+ */
+function eventHandler(channel, subId, type, payload) {
+	const message = {
+		channel: channel,
+		subId: subId,
+		type: type,
+		payload: payload
+	};
+	msgDirector.handleMsg(null, message);
 }
