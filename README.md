@@ -46,13 +46,13 @@ A message from the client needs to follow a certain structure in order to be han
 #### Message Properties
 
 * type - This is required to determine how the message should be handled. There are 6 different types
- ** subscribe - Subscribes to a subscription. Requires the `channel` and `subId` properties to be defined
- ** unsubscribe - Unsubscribes from a subscription. If no `channel` or `subId` is provided will unsubscribe the user from all subscriptions. If a `channel` is provided with no `subId` will unsubscribe from all subscriptions in the provided channel. If a `channel` and `subId` are provided will unsubscribe from just that subscription
- ** announce - Sends a message to different set of connections based on the properties provided. If no `channel` is provided will send to ALL connections. If a `channel` is provided with no `subId` will send to all connections for that `channel`. If a `channel` and `subId` is provided will send to all connections that are a part of that subscription.
- ** ack - An acknowledgement from the client. Must include the `id` from the original message
- ** getInfo - Provides basic information about the server, connections, channels, subscriptions and messages awaiting acknowledgement
- ** getInfoDetail - Provides detailed information about the connections, channels, subscriptions and messages awaiting acknowledgement
- ** user - Provides a means to setup channels and subscriptions for a specific user. This allows messages to be sent to a specific user
+   ** subscribe - Subscribes to a subscription. Requires the `channel` and `subId` properties to be defined
+   ** unsubscribe - Unsubscribes from a subscription. If no `channel` or `subId` is provided will unsubscribe the user from all subscriptions. If a `channel` is provided with no `subId` will unsubscribe from all subscriptions in the provided channel. If a `channel` and `subId` are provided will unsubscribe from just that subscription
+   ** announce - Sends a message to different set of connections based on the properties provided. If no `channel` is provided will send to ALL connections. If a `channel` is provided with no `subId` will send to all connections for that `channel`. If a `channel` and `subId` is provided will send to all connections that are a part of that subscription.
+   ** ack - An acknowledgement from the client. Must include the `id` from the original message
+   ** getInfo - Provides basic information about the server, connections, channels, subscriptions and messages awaiting acknowledgement
+   ** getInfoDetail - Provides detailed information about the connections, channels, subscriptions and messages awaiting acknowledgement
+   ** user - Provides a means to setup channels and subscriptions for a specific user. This allows messages to be sent to a specific user
 * channel - This defines a category of subscriptions
 * subId - This provides a list of connections for a specific id or subscription
 * payload - This can be any type of data
