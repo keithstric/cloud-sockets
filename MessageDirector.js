@@ -1,6 +1,10 @@
-
 const ChannelManager = require('./ChannelManager').ChannelManager;
 
+/**
+ * This class is responsible for the sending and handling of all messages to and from
+ * the server
+ * @class {MessageDirector}
+ */
 class MessageDirector {
 	/**
 	 * The message director handles the processing of all messages and maintains the que of any
@@ -25,8 +29,8 @@ class MessageDirector {
 	/**
 	 * Provided a message, will decide what to do with that message based on the
 	 * message's type property
-	 * @param {WebSocket} ws 
-	 * @param {any} message 
+	 * @param {WebSocket} ws
+	 * @param {any} message
 	 */
 	handleMsg(ws, message) {
 		if (message) {
@@ -63,9 +67,9 @@ class MessageDirector {
 	}
 	/**
 	 * Subscribe to a subscription inside a channel
-	 * @param {WebSocket} ws 
-	 * @param {string} channel 
-	 * @param {string} subId 
+	 * @param {WebSocket} ws
+	 * @param {string} channel
+	 * @param {string} subId
 	 */
 	_subscribe(ws, channel, subId) {
 		const ack = this.channelMgr.subscribeChannel(ws, channel, subId);
@@ -74,9 +78,9 @@ class MessageDirector {
 	/**
 	 * Unsubscribe from a subscription. If no subId is provided will unsubscribe from all
 	 * subscriptions in a channel
-	 * @param {WebSocket} ws 
-	 * @param {string} channel 
-	 * @param {string} subId? 
+	 * @param {WebSocket} ws
+	 * @param {string} channel
+	 * @param {string} subId?
 	 */
 	_unsubscribe(ws, channel, subId) {
 		const ack = this.channelMgr.unsubscribeChannel(ws, channel, subId);
@@ -86,7 +90,7 @@ class MessageDirector {
 	 * Send a message to all connections, a specific channel's connections or
 	 * a subscription's connections. If no subId, will send to entire channel
 	 * if no channel will send to everybody
-	 * @param {any} msg 
+	 * @param {any} msg
 	 * @param {string} channel?
 	 * @param {string} subId?
 	 */
@@ -103,6 +107,7 @@ class MessageDirector {
 		}
 		conns.forEach((ws) => {
 			if (this.pubsubPublisher) {
+				// TODO: Need to reinvistigate this, I don't think this is quite right as it will probably cause an endless loop
 				const dataBuffer = Buffer.from(this._formatMessage(msg));
 				this.pubsubPublisher(this.pubsubTopic, dataBuffer);
 			}else{
@@ -169,8 +174,8 @@ class MessageDirector {
 	}
 	/**
 	 * Add a message to the awaitingAck object
-	 * @param {WebSocket} ws 
-	 * @param {any} msg 
+	 * @param {WebSocket} ws
+	 * @param {any} msg
 	 */
 	_addAwaitingAck(ws, msg) {
 		if (ws && msg) {
@@ -191,7 +196,7 @@ class MessageDirector {
 	/**
 	 * Remove a message from the awaitingAck object and stop
 	 * the interval for resending the message
-	 * @param {string} ackId 
+	 * @param {string} ackId
 	 */
 	_removeAwaitingAck(ws, msg) {
 		if (ws && msg) {
@@ -230,7 +235,7 @@ class MessageDirector {
 	/**
 	 * Gets a message ready for sending. Adds an id and sentDateTime properties
 	 * then stringifies it.
-	 * @param {any} msg 
+	 * @param {any} msg
 	 */
 	_formatMessage(msg) {
 		let msgObj = msg;

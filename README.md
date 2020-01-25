@@ -164,6 +164,7 @@ const channelMgr = {
 }
 ```
 
+**Example B**
 ```javascript
 // I know that the value of "awaitingAck" does not match that of a map, but it's the closest visual que I could add to demonstrate that structure
 const awaitingAck = {

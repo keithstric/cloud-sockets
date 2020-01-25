@@ -22,20 +22,20 @@ let wsConfig = {
  * default cloud-ws options
  */
 let options = {
-	/** 
-	 * message types which require an acknowledgement 
+	/**
+	 * message types which require an acknowledgement
 	 * @type {string[]}
 	 */
 	ackMessageTypes: ['announce'],
-	/** 
-	 * custom message handlers. key is the message type, value is the handler function 
+	/**
+	 * custom message handlers. key is the message type, value is the handler function
 	 * the handler function will receive 2 properties, the WebSocket and message. If
 	 * an acknowledgement is required, be sure your function returns a message
 	 * @type {key: {string}, value: {function}}
 	 */
 	customMsgHandlers: {},
-	/** 
-	 * message types which will be broadcast to all connections 
+	/**
+	 * message types which will be broadcast to all connections
 	 * @type {string[]}
 	 */
 	broadcastMessageTypes: [],
@@ -46,12 +46,21 @@ let options = {
 	pubsubListener: null,
 	/**
 	 * Optional: custom PubSub publisher. Will provide
-	 * 3 arguments to function call: channel, subscriptionId and 
+	 * 3 arguments to function call: channel, subscriptionId and
 	 * payload (non stringified)
 	 * @type {function}
 	 */
 	pubsubPublisher: null,
-	pubsubTopic: null,
+	/**
+	 * message types that should be sent along to PubSub
+	 * @type {string[]}
+	 */
+	pubsubMessageTypes: [],
+	/**
+	 * The number of milliseconds to wait before attempting to resend
+	 * a message that requires acknowledgement
+	 * @type {number}
+	 */
 	msgResendDelay: 60000
 };
 /**
@@ -91,8 +100,8 @@ function setupListeners() {
 		if (!connectionsMap.has(ws)) {
 			connectionsMap.set(ws, {});
 			msgDirector.sendMessage(ws, {
-				type: 'welcome', 
-				message: 'Welcome to the cloud-sockets WebSocket', 
+				type: 'welcome',
+				message: 'Welcome to the cloud-sockets WebSocket',
 				numConnections: connectionsMap.size
 			});
 		}
@@ -139,8 +148,8 @@ function cleanupConnections(ws) {
 }
 /**
  * Adds subscriptions to the connection object for the provided WebSocket
- * @param {WebSocket} ws 
- * @param {any} msg 
+ * @param {WebSocket} ws
+ * @param {any} msg
  */
 function onSubscribe(ws, msg) {
 	if (ws && msg) {
@@ -156,8 +165,8 @@ function onSubscribe(ws, msg) {
 }
 /**
  * Removes subscriptions from the connection object for the provided WebSocket
- * @param {WebSocket} ws 
- * @param {any} msg 
+ * @param {WebSocket} ws
+ * @param {any} msg
  */
 function onUnsubscribe(ws, msg) {
 	if (ws && msg) {
@@ -183,8 +192,8 @@ function onUnsubscribe(ws, msg) {
  * Gathers information from the MessageHandler and ChannelManager then
  * includes information about the configuration and connections
  * and sends it back to the requestor
- * @param {WebSocket} ws 
- * @param {any} msg 
+ * @param {WebSocket} ws
+ * @param {any} msg
  */
 function getInfoDetail(ws, msg) {
 	let info = {
@@ -220,7 +229,7 @@ function getInfo(ws, msg) {
 /**
  * Creates an event listener for the defined type. Type comes from the
  * subscription message from the client.
- * @param {string} channel 
+ * @param {string} channel
  */
 function createEventListener(channel) {
 	const listenerCount = global.socketEmitter.listenerCount(channel);
