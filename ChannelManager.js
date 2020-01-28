@@ -210,7 +210,7 @@ class ChannelManager {
 		payload.channelInfo.totalChannels = channels ? channels.length : 0;
 		if (channel) {
 			payload.channelInfo.channelConnectionCount = this.getChannelConnections(channel).length;
-			payload.channelInfo.channelSubscriptions = this.getChannelMap(channel).size;
+			payload.channelInfo.channelSubscriptions = this.getChannelMap(channel) ? this.getChannelMap(channel).size : 0;
 		}
 		let subCount = 0;
 		channels.forEach((channel) => {
@@ -229,27 +229,23 @@ class ChannelManager {
 		const returnVal = [];
 		if (channel) {
 			const channelMap = this.getChannelMap(channel);
-			[...channelMap.keys()].forEach((subId) => {
-				returnVal.push({
-					subId: subId,
-					numConnections: channelMap.get(subId).length
+			if (channelMap) {
+				[...channelMap.keys()].forEach((subId) => {
+					returnVal.push({
+						subId: subId,
+						numConnections: channelMap.get(subId).length
+					});
 				});
-			});
+			}
 		}
 		return returnVal;
 	}
-
+	/**
+	 * Check if the channelMaps contain an entry for the user
+	 * @param {string} uniqUserIdentifier 
+	 */
 	hasUser(uniqUserIdentifier) {
 		return this.channelMaps[uniqUserIdentifier];
-	}
-
-	setupUser(ws, userObj) {
-		console.log('ChannelManager.setupUser, userObj=', userObj);
-		if (this.includeUserProps && this.includeUserProps.length) {
-			this.includeUserProps.forEach((prop) => {
-				this.subscribeChannel(ws, userObj[prop], 'user');
-			});
-		}
 	}
 }
 

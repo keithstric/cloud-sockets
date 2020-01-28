@@ -1,6 +1,6 @@
 {
   "name": "cloud-sockets",
-  "version": "1.0.0",
+  "version": "0.5.0",
   "description": "An express middleware providing a WebSocket server",
   "main": "index.js",
   "scripts": {

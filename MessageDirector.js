@@ -16,7 +16,7 @@ class MessageDirector {
 	 */
 	constructor(options, channelMgr) {
 		this.acknowledgementTypes = [...options.ackMessageTypes];
-		this.customMessageHandlers = {...options.customMessageHandlers};
+		this.customMsgHandlers = {...options.customMsgHandlers};
 		this.awaitingRetryDelay = options.msgResendDelay;
 		this.channelMgr = channelMgr || new ChannelManager();
 		this.pubsubPublisher = options.pubsubPublisher;
@@ -37,36 +37,35 @@ class MessageDirector {
 		if (message) {
 			const msg = JSON.parse(message);
 			const {type} = msg;
-			let ack = {type: 'error', value: `Message type "${msg.type}" not supported`, msg: msg};
 			switch (type) {
 				case 'subscribe':
-					this._subscribe(ws, msg.channel, msg.subId);
+					this.subscribe(ws, msg.channel, msg.subId);
 					break;
 				case 'ack':
 					this._removeAwaitingAck(ws, msg);
 					break;
 				case 'unsubscribe':
-					this._unsubscribe(ws, msg.channel, msg.subId);
+					this.unsubscribe(ws, msg.channel, msg.subId);
 					break;
 				case 'announce':
 					this.announce(msg, msg.channel, msg.subId);
-					break;
-				case 'user':
 					break;
 				case 'getInfo':
 					break;
 				case 'getInfoDetail':
 					break;
 				default:
-					if (msg.type && this.customMessageHandlers[msg.type]) {
-						this.customMessageHandlers[msg.type](ws, msg);
+					if (msg.type && this.customMsgHandlers[msg.type]) {
+						const formattedMsg = this.formatMessage(msg);
+						this.customMsgHandlers[msg.type](ws, formattedMsg, this);
 					}else if (msg.type && this.pubsubMessageTypes.indexOf(msg.type) > -1) {
 						if (this.pubsubPublisher && this.pubsubTopic) {
-							const formattedMsg = this._formatMessage(msg);
+							const formattedMsg = this.formatMessage(msg);
 							this.pubsubPublisher(this.pubsubTopic, formattedMsg);
 						}
 					}else{
-						this.sendMessage(ws, ack);
+						let err = {type: 'error', value: `Message type "${msg.type}" not supported`, msg: msg};
+						this.sendMessage(ws, err);
 					}
 			}
 		}
@@ -77,7 +76,7 @@ class MessageDirector {
 	 * @param {string} channel
 	 * @param {string} subId
 	 */
-	_subscribe(ws, channel, subId) {
+	subscribe(ws, channel, subId) {
 		const ack = this.channelMgr.subscribeChannel(ws, channel, subId);
 		this.sendMessage(ws, ack);
 	}
@@ -88,7 +87,7 @@ class MessageDirector {
 	 * @param {string} channel
 	 * @param {string} subId?
 	 */
-	_unsubscribe(ws, channel, subId) {
+	unsubscribe(ws, channel, subId) {
 		const ack = this.channelMgr.unsubscribeChannel(ws, channel, subId);
 		this.sendMessage(ws, ack);
 	}
@@ -137,7 +136,10 @@ class MessageDirector {
 		info.messageInfo.awaitingMessages = awaitingMsgArr;
 		return info;
 	}
-
+	/**
+	 * Get the basic information about the MessageDirector
+	 * @param {string} channel
+	 */
 	getInfo(channel) {
 		let channelInfo = this.channelMgr.getInfo(channel);
 		channelInfo.messageInfo = {};
@@ -163,7 +165,7 @@ class MessageDirector {
 			if (msg && typeof msg === 'string') {
 				msgObj = JSON.parse(msg);
 			}
-			const message = this._formatMessage(msg);
+			const message = this.formatMessage(msg);
 			ws.send(message);
 			if (this.acknowledgementTypes.indexOf(msgObj.type) > -1 && !msgObj.isRetry) {
 				this._addAwaitingAck(ws, msgObj);
@@ -226,7 +228,7 @@ class MessageDirector {
 	 * Create a uuid
 	 * @returns {string}
 	 */
-	uuidv4() {
+	_uuidv4() {
 		return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
 			var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
 			return v.toString(16);
@@ -237,13 +239,13 @@ class MessageDirector {
 	 * then stringifies it.
 	 * @param {any} msg
 	 */
-	_formatMessage(msg) {
+	formatMessage(msg) {
 		let msgObj = msg;
 		if (typeof msg === 'string') {
 			msgObj = JSON.parse(msg);
 		}
 		if (!msgObj.isRetry) {
-			msgObj.id = this.uuidv4();
+			msgObj.id = this._uuidv4();
 			msgObj.sentDateTime = new Date().toISOString();
 		}else{
 			msgObj.lastRetryDateTime = new Date().toISOString();

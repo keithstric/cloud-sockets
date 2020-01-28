@@ -94,13 +94,6 @@ module.exports = function socketServer(serverConfig, cloudWsOptions) {
 	
 	// Middleware function
 	return function(req, res, next) {
-		if (options.setupHttpUser && options.includeUserProps.length) {
-			if (req.session.user && !channelMgr.hasUser(req.session.user[options.includeUserProps[0]])) {
-				if (req.cloud_sockets && req.cloud_sockets.ws) {
-					channelMgr.setupUser(req.cloud_sockets.ws, req.session.user);
-				}
-			}
-		}
 		next();
 	}
 }
@@ -109,13 +102,6 @@ module.exports = function socketServer(serverConfig, cloudWsOptions) {
  */
 function setupListeners() {
 	wsServer.on('connection', (ws, req) => {
-		if (!req.cloud_sockets) {
-			req.cloud_sockets = {
-				channelMgr: channelMgr,
-				msgDirector: msgDirector,
-				ws: ws
-			};
-		}
 		if (!connectionsMap.has(ws)) {
 			connectionsMap.set(ws, {});
 			msgDirector.sendMessage(ws, {
@@ -142,8 +128,10 @@ function setupListeners() {
 			console.error(err);
 			cleanupConnections(ws);
 		});
-		ws.on('close', (ws) => {
-			cleanupConnections(ws);
+		ws.on('close', () => {
+			const connObj = connectionsMap.get(ws);
+			cleanupConnections(connObj);
+			connectionsMap.delete(ws);
 		});
 	});
 
@@ -155,15 +143,13 @@ function setupListeners() {
 /**
  * Cleans up the connections after an error or close connection
  */
-function cleanupConnections(ws) {
-	const connObj = connectionsMap.get(ws);
+function cleanupConnections(connObj) {
 	if (connObj) {
 		const channelKeys = Object.keys(connObj);
 		const acks = [];
 		channelKeys.forEach((channel) => {
 			acks.push(channelMgr.unsubscribeChannel(ws, channel));
 		});
-		connectionsMap.delete(ws);
 	}
 }
 /**
@@ -174,7 +160,7 @@ function cleanupConnections(ws) {
 function onSubscribe(ws, msg) {
 	if (ws && msg) {
 		const {channel, subId} = msg;
-		const connObj = connectionsMap.get(ws);
+		const connObj = connectionsMap.get(ws) || {};
 		if (connObj && connObj[channel]) {
 			connObj[channel] = [...connObj[channel], subId];
 		}else{
@@ -276,7 +262,10 @@ function eventHandler(channel, subId, type, payload) {
 	};
 	msgDirector.handleMsg(null, message);
 }
-
+/**
+ * Handles messages from PubSub
+ * @param {Message} message 
+ */
 function pubsubHandler(message) {
 	if (message) {
 		message.ack();

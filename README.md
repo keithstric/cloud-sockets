@@ -83,7 +83,6 @@ A message from the client needs to follow a certain structure in order to be han
     * `ack` - An acknowledgement from the client. Must include the `id` from the original message
     * `getInfo` - Provides basic information about the server, connections, channels, subscriptions and messages awaiting acknowledgement
     * `getInfoDetail` - Provides detailed information about the connections, channels, subscriptions and messages awaiting acknowledgement
-    * `user` - Provides a means to setup channels and subscriptions for a specific user. This allows messages to be sent to a specific user
 * `channel?` - This defines a category of subscriptions
 * `subId?` - This defines an id for a subscription
 * `payload?` - This can be any type of data
@@ -118,13 +117,15 @@ The following options are available for customization of cloud-sockets.
 
 * `ackMessageTypes` {string[]} - An array of message types which will require an acknoledgement from the client upon receipt
 * `broadcastMessageTypes` {string[]} - An array of message types that should send a message to all connections
-* `customMsgHandlers` - {{string, function}} - An object whose key is a message type and value is a function. You may not define a custom handler for any of the default message types
+* `customMsgHandlers` {{string, function}} - An object whose key is a message type and value is a function. You may not define a custom handler for any of the default message types
+* `includeUserProps` - If setupHttpUser is true, this must be defined. Is an array of properties found in the user object at `request.session.user`
 * `msgResendDelay` {number} - Number of milliseconds to wait before resending a message awaiting acknowledgement
 * `pubsubListener` {function} - Listener function for your PubSub provider
 * `pubsubMessageTypes` {string[]} - Array of message types that should be sent through the PubSub topic
 * `pubsubPublisher` {function} - Function for publishing to your PubSub provider
 * `pubsubSubscriptionName` {string} - The PubSub subscription name
 * `pubsubTopicName` {string} - The PubSub topic name
+* `setupHttpUser` {boolean} - Set to true to add http users who have a cloud-sockets connection
 
 ## Process flow
 
