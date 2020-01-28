@@ -119,9 +119,11 @@ function setupListeners() {
 			}else if (msg.type === 'unsubscribe') {
 				onUnsubscribe(ws, msg);
 			}else if (msg.type === 'getInfoDetail') {
-				getInfoDetail(ws, msg);
+				const info = getInfoDetail(ws, msg);
+				msgDirector.sendMessage(ws, info);
 			}else if (msg.type === 'getInfo') {
-				getInfo(ws, msg);
+				const info = getInfo(ws, msg);
+				msgDirector.sendMessage(ws, info);
 			}
 		});
 		ws.on('error', (err) => {
@@ -130,7 +132,7 @@ function setupListeners() {
 		});
 		ws.on('close', () => {
 			const connObj = connectionsMap.get(ws);
-			cleanupConnections(connObj);
+			cleanupConnections(ws, connObj);
 			connectionsMap.delete(ws);
 		});
 	});
@@ -143,12 +145,13 @@ function setupListeners() {
 /**
  * Cleans up the connections after an error or close connection
  */
-function cleanupConnections(connObj) {
+function cleanupConnections(ws, connObj) {
 	if (connObj) {
 		const channelKeys = Object.keys(connObj);
 		const acks = [];
 		channelKeys.forEach((channel) => {
 			acks.push(channelMgr.unsubscribeChannel(ws, channel));
+			global.socketEmitter.removeListener(channel, eventHandler);
 		});
 	}
 }
@@ -202,35 +205,29 @@ function onUnsubscribe(ws, msg) {
  * @param {any} msg
  */
 function getInfoDetail(ws, msg) {
-	let info = {
-		serverInfo: {},
-		connectionInfo: {}
-	};
-	info.connectionInfo.totalConnections = connectionsMap.size;
+	let info = getInfo(ws, msg);
 	info.type = 'getInfoDetail';
-	info.serverInfo.customPubSub = !!(options.pubsubListener && options.pubsubPublisher);
-	info.serverInfo.ackMessageTypes = options.ackMessageTypes;
-	info.serverInfo.customMsgHandlers = Object.keys(options.customMsgHandlers);
-	info.serverInfo.msgResendDelay = options.msgResendDelay + 'ms';
-	info.serverInfo.serverPort = wsServer.address.port;
-	info = {...info, ...msgDirector.getInfoDetail(msg.channel)}
-	msgDirector.sendMessage(ws, info);
+	info = {...info, ...msgDirector.getInfoDetail(msg.channel)};
+	info = {...info, ...channelMgr.getInfoDetail(msg.channel)};
+	return info;
 }
 
 function getInfo(ws, msg) {
 	let info = {
-		serverInfo: {},
-		connectionInfo: {}
+		type: 'getInfo',
+		serverInfo: {
+			port: wsServer.address.port,
+			eventEmitters: global.socketEmitter.eventNames(),
+			customPubSub: !!(options.pubsubListener && options.pubsubPublisher),
+			options: {...options, customMsgHandlers: Object.keys(options.customMsgHandlers)}
+		},
+		connectionInfo: {
+			totalConnections: connectionsMap ? connectionsMap.size : 0
+		}
 	};
-	info.connectionInfo.totalConnections = connectionsMap.size;
-	info.type = 'getInfoDetail';
-	info.serverInfo.customPubSub = !!(options.pubsubListener && options.pubsubPublisher);
-	info.serverInfo.ackMessageTypes = options.ackMessageTypes;
-	info.serverInfo.customMsgHandlers = Object.keys(options.customMsgHandlers);
-	info.serverInfo.msgResendDelay = options.msgResendDelay + 'ms';
-	info.serverInfo.serverPort = wsServer.address.port;
-	info = {...info, ...msgDirector.getInfo(msg.channel)}
-	msgDirector.sendMessage(ws, info);
+	info = {...info, ...msgDirector.getInfo(msg.channel)};
+	info = {...info, ...channelMgr.getInfo(msg.channel)};
+	return info;
 }
 /**
  * Creates an event listener for the defined type. Type comes from the

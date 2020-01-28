@@ -122,10 +122,7 @@ class MessageDirector {
 	 * @param {string} channel?
 	 */
 	getInfoDetail(channel) {
-		const channelMgrInfo = this.channelMgr.getInfoDetail(channel);
-		const info = {...this.getInfo(channel), ...channelMgrInfo};
-		// const info = this.getInfo(channel);
-		// info.channelInfo = channelMgrInfo.channelInfo;
+		const info = this.getInfo(channel);
 		let awaitingMsgArr = [];
 		const awaitingKeys = [...this.awaitingAck.keys()];
 		awaitingKeys.forEach((ws) => {
@@ -141,17 +138,19 @@ class MessageDirector {
 	 * @param {string} channel
 	 */
 	getInfo(channel) {
-		let channelInfo = this.channelMgr.getInfo(channel);
-		channelInfo.messageInfo = {};
-		channelInfo.messageInfo.totalConnectionsAwaitingAck = this.awaitingAck.size;
+		let info = {
+			messageInfo: {
+				totalConnectionsAwaitingAck: this.awaitingAck.size
+			},
+		}
 		let totalAwaitingMsgs = 0;
 		const awaitingKeys = [...this.awaitingAck.keys()];
 		awaitingKeys.forEach((ws) => {
 			const awaitingMsgsLen = this.awaitingAck.get(ws).length;
 			totalAwaitingMsgs = totalAwaitingMsgs + awaitingMsgsLen;
 		});
-		channelInfo.messageInfo.totalAwaitingMsgs = totalAwaitingMsgs;
-		return channelInfo;
+		info.messageInfo.totalAwaitingMsgs = totalAwaitingMsgs;
+		return info;
 	}
 	/**
 	 * Send a payload to the supplied WebSocket and add the message to the
