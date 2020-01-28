@@ -20,7 +20,8 @@ class MessageDirector {
 		this.awaitingRetryDelay = options.msgResendDelay;
 		this.channelMgr = channelMgr || new ChannelManager();
 		this.pubsubPublisher = options.pubsubPublisher;
-		this.pubsubTopic = options.pubsubTopic;
+		this.pubsubTopic = options.pubsubTopicName;
+		this.pubsubMessageTypes = options.pubsubMessageTypes;
 		/**
 		 * @type {Map<WebSocket, <subId: string>[]>}
 		 */
@@ -59,6 +60,11 @@ class MessageDirector {
 				default:
 					if (msg.type && this.customMessageHandlers[msg.type]) {
 						this.customMessageHandlers[msg.type](ws, msg);
+					}else if (msg.type && this.pubsubMessageTypes.indexOf(msg.type) > -1) {
+						if (this.pubsubPublisher && this.pubsubTopic) {
+							const formattedMsg = this._formatMessage(msg);
+							this.pubsubPublisher(this.pubsubTopic, formattedMsg);
+						}
 					}else{
 						this.sendMessage(ws, ack);
 					}
@@ -106,13 +112,7 @@ class MessageDirector {
 			conns = this.channelMgr.getAllConnections();
 		}
 		conns.forEach((ws) => {
-			if (this.pubsubPublisher) {
-				// TODO: Need to reinvistigate this, I don't think this is quite right as it will probably cause an endless loop
-				const dataBuffer = Buffer.from(this._formatMessage(msg));
-				this.pubsubPublisher(this.pubsubTopic, dataBuffer);
-			}else{
-				this.sendMessage(ws, msg);
-			}
+			this.sendMessage(ws, msg);
 		});
 	}
 	/**

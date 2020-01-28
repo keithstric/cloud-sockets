@@ -26,7 +26,7 @@ let options = {
 	 * message types which require an acknowledgement
 	 * @type {string[]}
 	 */
-	ackMessageTypes: ['announce'],
+	ackMessageTypes: [],
 	/**
 	 * custom message handlers. key is the message type, value is the handler function
 	 * the handler function will receive 2 properties, the WebSocket and message. If
@@ -56,12 +56,16 @@ let options = {
 	 * @type {string[]}
 	 */
 	pubsubMessageTypes: [],
+	pubsubTopicName: null,
+	pubsubSubscriptionName: null,
 	/**
 	 * The number of milliseconds to wait before attempting to resend
 	 * a message that requires acknowledgement
 	 * @type {number}
 	 */
-	msgResendDelay: 60000
+	msgResendDelay: 60000,
+	setupHttpUser: false,
+	includeUserProps: []
 };
 /**
  * Websocket server
@@ -83,12 +87,20 @@ module.exports = function socketServer(serverConfig, cloudWsOptions) {
 	options = {...options, ...cloudWsOptions};
 	wsConfig = {...wsConfig, ...serverConfig};
 	wsServer = new Server(wsConfig);
-	console.log(`WebSocket server fired up on port ${wsServer.address().port}`);
-	channelMgr = new ChannelManager();
+	channelMgr = new ChannelManager(options);
 	msgDirector = new MessageDirector(options, channelMgr);
-
 	setupListeners();
+	console.log(`WebSocket server fired up on port ${wsServer.address().port}`);
+	
+	// Middleware function
 	return function(req, res, next) {
+		if (options.setupHttpUser && options.includeUserProps.length) {
+			if (req.session.user && !channelMgr.hasUser(req.session.user[options.includeUserProps[0]])) {
+				if (req.cloud_sockets && req.cloud_sockets.ws) {
+					channelMgr.setupUser(req.cloud_sockets.ws, req.session.user);
+				}
+			}
+		}
 		next();
 	}
 }
@@ -97,6 +109,13 @@ module.exports = function socketServer(serverConfig, cloudWsOptions) {
  */
 function setupListeners() {
 	wsServer.on('connection', (ws, req) => {
+		if (!req.cloud_sockets) {
+			req.cloud_sockets = {
+				channelMgr: channelMgr,
+				msgDirector: msgDirector,
+				ws: ws
+			};
+		}
 		if (!connectionsMap.has(ws)) {
 			connectionsMap.set(ws, {});
 			msgDirector.sendMessage(ws, {
@@ -128,8 +147,9 @@ function setupListeners() {
 		});
 	});
 
-	if (options.pubsubListener) {
-		this.options.pubsubListener();
+	if (options.pubsubListener && options.pubsubSubscriptionName) {
+		const subscription = options.pubsubListener(options.pubsubSubscriptionName);
+		subscription.on('message', pubsubHandler);
 	}
 }
 /**
@@ -255,4 +275,17 @@ function eventHandler(channel, subId, type, payload) {
 		payload: payload
 	};
 	msgDirector.handleMsg(null, message);
+}
+
+function pubsubHandler(message) {
+	if (message) {
+		message.ack();
+		if (message.data) {
+			let response = JSON.parse(message.data);
+			response.pubsubId = message.id;
+			const {subId, channel} = response;
+			// We can't just pass it on to the msgDirector.handleMessage because we'll end up in a loop
+			msgDirector.announce(response, channel, subId);
+		}
+	}
 }

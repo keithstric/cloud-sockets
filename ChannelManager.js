@@ -7,8 +7,9 @@
  */
 class ChannelManager {
 
-	constructor() {
+	constructor(options) {
 		this.channelMaps = {};
+		this.includeUserProps = options.includeUserProps || [];
 	}
 	/**
 	 * Get a channel map
@@ -236,6 +237,19 @@ class ChannelManager {
 			});
 		}
 		return returnVal;
+	}
+
+	hasUser(uniqUserIdentifier) {
+		return this.channelMaps[uniqUserIdentifier];
+	}
+
+	setupUser(ws, userObj) {
+		console.log('ChannelManager.setupUser, userObj=', userObj);
+		if (this.includeUserProps && this.includeUserProps.length) {
+			this.includeUserProps.forEach((prop) => {
+				this.subscribeChannel(ws, userObj[prop], 'user');
+			});
+		}
 	}
 }
 

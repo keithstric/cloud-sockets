@@ -35,7 +35,7 @@ app.use(socketServer(wsConfig, csOptions))
  * @param {string} type - The message type
  * @param {any} payload - Your data goes here
  */
-global.socketEmitter.emit('AddTodo', '<channel>', '<subId>', 'announce' {
+global.socketEmitter.emit('AddTodo', 'todoList1234', 'todo1234', 'announce' {
 	subject: 'New todo',
 	text: 'This is a new todo item description'
 });
@@ -47,7 +47,7 @@ The basis behind cloud-sockets is to provide a robust WebSocket Server implement
 
 * Channel - This is an organization type where a channel is a category with sub-categories. A channel will have an event listener created to handle messages spawning from an event. It also provides a means for messages to find their target(s).
 * Subscription - This would be a sub-category of a channel. It would probably be an id of some kind. This is an array of `WebSocket` connections.
-* Message - This is an object that will be passed between WebSocket Server and Client. It must follow the interface defined for a message for all of this to function properly.
+* Message - This is an object that will be passed between WebSocket Server, PubSub and Client. It must follow the interface defined for a message for all of this to function properly.
 * Acknowledgement - Some message types require acknowledgement from the client that it was received. Messages that require acknowledgement will be resent for a certain amount of time until an acknowledgement is received
 
 ### WebSocket Middleware
@@ -60,7 +60,7 @@ This map provides a way to organize all the server's connections and what channe
 
 #### Event Handler
 
-The event handler is named `global.socketEmitter` and is an `EventEmitter` from the nodejs `events` module. This is your entry point to sending messages from within your application. When a `channel` is subscribed to an event listener for that `channel` is created. Likewise when there are no subscriptions to a `channel` the event listener is removed.
+The event handler is named `global.socketEmitter` and is an `EventEmitter` from the nodejs `events` module. This is your entry point to sending messages from within your application. When a `channel` is subscribed to an event listener for that `channel` is created. Likewise when there are no subscriptions/connections to a `channel` the event listener is removed.
 
 ### MessageDirector
 
@@ -74,12 +74,12 @@ Some messages you may want to keep retrying until we know a client has received 
 
 A message from the client needs to follow a certain structure in order to be handled properly. If it doesn't follow this structure it'll just be returned to sender. The structure follows the following interface.
 
-#### Message Properties
+##### Message Properties
 
 * `type` - This is required to determine how the message should be handled. There are 6 different types
     * `subscribe` - Subscribes to a subscription. Requires the `channel` and `subId` properties to be defined
     * `unsubscribe` - Unsubscribes from a subscription. If no `channel` or `subId` is provided will unsubscribe the user from all subscriptions. If a `channel` is provided with no `subId` will unsubscribe from all subscriptions in the provided channel. If a `channel` and `subId` are provided will unsubscribe from just that subscription
-    * `announce` - Sends a message to different set of connections based on the properties provided. If no `channel` is provided will send to ALL connections. If a `channel` is provided with no `subId` will send to all connections for that `channel`. If a `channel` and `subId` is provided will send to all connections that are a part of that subscription.
+    * `announce` - Sends a message to connections based on the properties provided. If no `channel` is provided will send to ALL connections. If a `channel` is provided with no `subId` will send to all connections for that `channel`. If a `channel` and `subId` is provided will send to all connections that are a part of that subscription.
     * `ack` - An acknowledgement from the client. Must include the `id` from the original message
     * `getInfo` - Provides basic information about the server, connections, channels, subscriptions and messages awaiting acknowledgement
     * `getInfoDetail` - Provides detailed information about the connections, channels, subscriptions and messages awaiting acknowledgement
@@ -87,6 +87,7 @@ A message from the client needs to follow a certain structure in order to be han
 * `channel?` - This defines a category of subscriptions
 * `subId?` - This defines an id for a subscription
 * `payload?` - This can be any type of data
+* `pubsubId?` - This is added to a message received via the pubsub
 
 ### ChannelManager
 
@@ -116,11 +117,14 @@ The WebSocket server is [ws](https://www.npmjs.com/package/ws) behind the scenes
 The following options are available for customization of cloud-sockets.
 
 * `ackMessageTypes` {string[]} - An array of message types which will require an acknoledgement from the client upon receipt
-* `customMsgHandlers` - {{string, function}} - An object whose key is a message type and value is a function. You may not define a custom handler for any of the default message types
 * `broadcastMessageTypes` {string[]} - An array of message types that should send a message to all connections
-* `pubsubListener` {function} - Listener function for your PubSub provider
-* `pubsubPublisher` {function} - Function for publishing to your PubSub provider
+* `customMsgHandlers` - {{string, function}} - An object whose key is a message type and value is a function. You may not define a custom handler for any of the default message types
 * `msgResendDelay` {number} - Number of milliseconds to wait before resending a message awaiting acknowledgement
+* `pubsubListener` {function} - Listener function for your PubSub provider
+* `pubsubMessageTypes` {string[]} - Array of message types that should be sent through the PubSub topic
+* `pubsubPublisher` {function} - Function for publishing to your PubSub provider
+* `pubsubSubscriptionName` {string} - The PubSub subscription name
+* `pubsubTopicName` {string} - The PubSub topic name
 
 ## Process flow
 
@@ -131,7 +135,7 @@ The entire process of a connection is as follows:
 3. Client sends a `subscribe` message to `channel` "todoList1234" and `subId` "todo1234"
 4. Message is handed off to the `MessageDirector` which notifies the `ChannelManager`
 5. The ChannelManager adds channel "todoList1234" to the channel maps
-6. The ChannelManager adds connection that sent subscribe message to the connections for subscription with id "todo1234" (see Example A below)
+6. The ChannelManager adds the senders connection to the connections for subscription with id "todo1234" (see Example A below)
 7. Server creates an event listener for event "todoList1234"
 8. MessageDirector sends a message back to client with a type of `ack`
 9. A message of type `announce` is received with `channel` "todoList1234" and `subId` "todo1234"
@@ -149,10 +153,11 @@ The entire process of a connection is as follows:
 14. Client sends `unsubscribe` message to `channel` "todoList1234"
 15. Server hands message to the `ChannelManager`
 16. Channel manager removes the connection from all subscriptions for the "todoList1234" channel
-17. Client disconnects from server
-18. Server notifies the `ChannelManager` which removes the disconnected connection from all subscriptions and cleans up any empty subscriptions and channels
-19. Server removes the "todoList1234" event listener
-20. Server removes connection from the connections map
+17. Server updates the connections map channels/subscriptions
+18. Client disconnects from server
+19. Server notifies the `ChannelManager` which removes the disconnected connection from all subscriptions and cleans up any empty subscriptions and channels
+20. Server removes the "todoList1234" event listener
+21. Server removes connection from the connections map
 
 **Example A**
 ```javascript
