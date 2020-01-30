@@ -121,8 +121,8 @@ class MessageDirector {
 	 * all channels.
 	 * @param {string} channel?
 	 */
-	getInfoDetail(channel) {
-		const info = this.getInfo(channel);
+	getInfoDetail() {
+		const info = this.getInfo();
 		let awaitingMsgArr = [];
 		const awaitingKeys = [...this.awaitingAck.keys()];
 		awaitingKeys.forEach((ws) => {
@@ -137,7 +137,7 @@ class MessageDirector {
 	 * Get the basic information about the MessageDirector
 	 * @param {string} channel
 	 */
-	getInfo(channel) {
+	getInfo() {
 		let info = {
 			messageInfo: {
 				totalConnectionsAwaitingAck: this.awaitingAck.size

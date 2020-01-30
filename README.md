@@ -52,8 +52,6 @@ The basis behind cloud-sockets is to provide a robust WebSocket Server implement
 
 ### WebSocket Middleware
 
-This contains the actual middleware function.
-
 #### Connection Map
 
 This map provides a way to organize all the server's connections and what channels and subscriptions a certain connection is subscribed to. It's main purpose is for cleanup efforts when a connection is lost. The strucure of this map is `Map<WebSocket, {<channel: string,>, <subId: string>[]}>`
@@ -87,6 +85,48 @@ A message from the client needs to follow a certain structure in order to be han
 * `subId?` - This defines an id for a subscription
 * `payload?` - This can be any type of data
 * `pubsubId?` - This is added to a message received via the pubsub
+* `id` - This is automatically added to every message sent by cloud-sockets
+* `sentDateTime` - This is automatically added to every message sent by cloud-sockets
+
+#### MessageDirector API
+
+**announce(message: any, channel?: string, subId?: string)**
+
+Send a message to a channel, subscription or everyone
+
+* If no `subId` is provided, will send a message to all connections for the `channel`
+* If no `channel` or `subId` will send a message to all connections that are subscribed to any channel
+
+**formatMessage(message: any)**
+
+Will add `id` and `sentDateTime` properties to the message, then stringify it and return the stringify results
+
+**getInfo()**
+
+Will send a message back to originating WebSocket containing information about messages awaiting acknowledgement
+
+**getInfoDetail()**
+
+Will return the same thing as getInfo but also an array of ids for messages awaiting acknowledgement
+
+**handleMsg(ws: WebSocket, message: any)**
+
+Route a message based on it's `type`, `channel` and `subId` properties.
+
+**sendMessage(ws: WebSocket, message: any)**
+
+Send a message to the provided Websocket. Will add an `id` and `sentDateTime` properties
+
+**subscribe(ws: WebSocket, channel: string, subId: string)**
+
+Subscribe the provided WebSocket to a channel subscription
+
+**unsubscribe(ws: WebSocket, channel?: string, subId?: string)**
+
+Unsubscribe from a channel subscription. 
+
+* If no `subId` is provided, will unsubscribe from all subscriptions inside a channel
+* If no `channel` or `subId` is provided will unsubscribe from all channels
 
 ### ChannelManager
 
@@ -117,7 +157,7 @@ The following options are available for customization of cloud-sockets.
 
 * `ackMessageTypes` {string[]} - An array of message types which will require an acknoledgement from the client upon receipt
 * `broadcastMessageTypes` {string[]} - An array of message types that should send a message to all connections
-* `customMsgHandlers` {{string, function}} - An object whose key is a message type and value is a function. You may not define a custom handler for any of the default message types
+* `customMsgHandlers` {{string, function}} - An object whose key is a message type and value is a function. You may not define a custom handler for any of the default message types. The function will receive 3 arguments: The initiating WebSocket, the message and the instance of the MessageDirector.
 * `includeUserProps` - If setupHttpUser is true, this must be defined. Is an array of properties found in the user object at `request.session.user`
 * `msgResendDelay` {number} - Number of milliseconds to wait before resending a message awaiting acknowledgement
 * `pubsubListener` {function} - Listener function for your PubSub provider
@@ -126,6 +166,10 @@ The following options are available for customization of cloud-sockets.
 * `pubsubSubscriptionName` {string} - The PubSub subscription name
 * `pubsubTopicName` {string} - The PubSub topic name
 * `setupHttpUser` {boolean} - Set to true to add http users who have a cloud-sockets connection
+
+## Custom Message Handlers
+
+You can define custom message handlers in the cloud-sockets options. These allow you to add your own logic to certain message types. The function provided will be passed 3 arguments: The originating WebSocket, the message and the current instance of the MessageDirector.
 
 ## Process flow
 

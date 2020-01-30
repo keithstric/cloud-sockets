@@ -200,18 +200,20 @@ class ChannelManager {
 		}
 		return payload;
 	}
-
-	getInfo(channel) {
+	/**
+	 * Will provide the connection information for a specific channel or all channels.
+	 * If there is no `channel` property in the msg, then it will return connection info
+	 * for all channels.
+	 * @param {string} channel?
+	 * @returns {type: string, {[<key: string>], {subId: string, numConnections: number}[]}}  
+	 */
+	getInfo() {
 		let payload = {
 			channelInfo: {}
 		};
 		const channels = Object.keys(this.channelMaps);
 		payload.channelInfo.totalConnections = this.getAllConnections().length;
 		payload.channelInfo.totalChannels = channels ? channels.length : 0;
-		if (channel) {
-			payload.channelInfo.channelConnectionCount = this.getChannelConnections(channel).length;
-			payload.channelInfo.channelSubscriptions = this.getChannelMap(channel) ? this.getChannelMap(channel).size : 0;
-		}
 		let subCount = 0;
 		channels.forEach((channel) => {
 			const channelMap = this.channelMaps[channel];

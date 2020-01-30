@@ -210,7 +210,7 @@ function onUnsubscribe(ws, msg) {
 function getInfoDetail(ws, msg) {
 	let info = getInfo(ws, msg);
 	info.type = 'getInfoDetail';
-	info = {...info, ...msgDirector.getInfoDetail(msg.channel)};
+	info = {...info, ...msgDirector.getInfoDetail()};
 	info = {...info, ...channelMgr.getInfoDetail(msg.channel)};
 	return info;
 }
@@ -228,8 +228,8 @@ function getInfo(ws, msg) {
 			totalConnections: connectionsMap ? connectionsMap.size : 0
 		}
 	};
-	info = {...info, ...msgDirector.getInfo(msg.channel)};
-	info = {...info, ...channelMgr.getInfo(msg.channel)};
+	info = {...info, ...msgDirector.getInfo()};
+	info = {...info, ...channelMgr.getInfo()};
 	return info;
 }
 /**
