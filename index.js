@@ -151,7 +151,10 @@ function cleanupConnections(ws, connObj) {
 		const acks = [];
 		channelKeys.forEach((channel) => {
 			acks.push(channelMgr.unsubscribeChannel(ws, channel));
-			global.socketEmitter.removeListener(channel, eventHandler);
+			const channelConns = channelMgr.getChannelConnections(channel);
+			if (!channelConns || !channelConns.length) {
+				global.socketEmitter.removeListener(channel, eventHandler);
+			}
 		});
 	}
 }
