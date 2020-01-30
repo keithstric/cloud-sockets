@@ -9,7 +9,7 @@ class ChannelManager {
 
 	constructor(options) {
 		this.channelMaps = {};
-		this.includeUserProps = options.includeUserProps || [];
+		this.includeUserProps = options ? options.includeUserProps : [];
 	}
 	/**
 	 * Get a channel map

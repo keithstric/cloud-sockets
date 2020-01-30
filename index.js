@@ -94,6 +94,11 @@ module.exports = function socketServer(serverConfig, cloudWsOptions) {
 	
 	// Middleware function
 	return function(req, res, next) {
+		req.cloud_sockets = {
+			msgDirector: msgDirector,
+			channelMgr: channelMgr,
+			connections: connectionsMap
+		};
 		next();
 	}
 }

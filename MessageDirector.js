@@ -1,4 +1,4 @@
-const ChannelManager = require('./ChannelManager').ChannelManager;
+const ChannelManager = require('./ChannelManager');
 
 /**
  * This class is responsible for the sending and handling of all messages to and from
@@ -15,13 +15,15 @@ class MessageDirector {
 	 * @returns {MessageDirector}
 	 */
 	constructor(options, channelMgr) {
-		this.acknowledgementTypes = [...options.ackMessageTypes];
-		this.customMsgHandlers = {...options.customMsgHandlers};
-		this.awaitingRetryDelay = options.msgResendDelay;
-		this.channelMgr = channelMgr || new ChannelManager();
-		this.pubsubPublisher = options.pubsubPublisher;
-		this.pubsubTopic = options.pubsubTopicName;
-		this.pubsubMessageTypes = options.pubsubMessageTypes;
+		if (options) {
+			this.acknowledgementTypes = [...options.ackMessageTypes];
+			this.customMsgHandlers = {...options.customMsgHandlers};
+			this.awaitingRetryDelay = options.msgResendDelay;
+			this.pubsubPublisher = options.pubsubPublisher;
+			this.pubsubTopic = options.pubsubTopicName;
+			this.pubsubMessageTypes = options.pubsubMessageTypes;
+		}
+		this.channelMgr = channelMgr || new ChannelManager(options);
 		/**
 		 * @type {Map<WebSocket, <subId: string>[]>}
 		 */
