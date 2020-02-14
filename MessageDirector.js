@@ -50,17 +50,17 @@ class MessageDirector {
 					this.unsubscribe(ws, msg.channel, msg.subId);
 					break;
 				case 'announce':
-					this.announce(msg, msg.channel, msg.subId);
+					this.announce(ws, msg, msg.channel, msg.subId);
 					break;
 				case 'getInfo':
 					break;
 				case 'getInfoDetail':
 					break;
 				default:
-					if (msg.type && this.customMsgHandlers[msg.type]) {
+					if (msg.type && this.customMsgHandlers && this.customMsgHandlers[msg.type]) {
 						const formattedMsg = this.formatMessage(msg);
 						this.customMsgHandlers[msg.type](ws, formattedMsg, this);
-					}else if (msg.type && this.pubsubMessageTypes.indexOf(msg.type) > -1) {
+					}else if (msg.type && this.pubsubMessageTypes && this.pubsubMessageTypes.indexOf(msg.type) > -1) {
 						if (this.pubsubPublisher && this.pubsubTopic) {
 							const formattedMsg = this.formatMessage(msg);
 							this.pubsubPublisher(this.pubsubTopic, formattedMsg);
@@ -97,11 +97,12 @@ class MessageDirector {
 	 * Send a message to all connections, a specific channel's connections or
 	 * a subscription's connections. If no subId, will send to entire channel
 	 * if no channel will send to everybody
+	 * @param {WebSocket} origWs - Originating WebSocket or null
 	 * @param {any} msg
 	 * @param {string} channel?
 	 * @param {string} subId?
 	 */
-	announce(msg, channel, subId) {
+	announce(origWs, msg, channel, subId) {
 		let conns = [];
 		if (channel) {
 			if (subId) {
@@ -113,7 +114,9 @@ class MessageDirector {
 			conns = this.channelMgr.getAllConnections();
 		}
 		conns.forEach((ws) => {
-			this.sendMessage(ws, msg);
+			if (ws !== origWs) {
+				this.sendMessage(ws, msg);
+			}
 		});
 	}
 	/**
@@ -168,7 +171,7 @@ class MessageDirector {
 			}
 			const message = this.formatMessage(msg);
 			ws.send(message);
-			if (this.acknowledgementTypes.indexOf(msgObj.type) > -1 && !msgObj.isRetry) {
+			if (this.acknowledgementTypes && this.acknowledgementTypes.indexOf(msgObj.type) > -1 && !msgObj.isRetry) {
 				this._addAwaitingAck(ws, msgObj);
 			}
 		}else{
@@ -246,7 +249,7 @@ class MessageDirector {
 			msgObj = JSON.parse(msg);
 		}
 		if (!msgObj.isRetry) {
-			msgObj.id = this._uuidv4();
+			msgObj.id = !msg.id ? this._uuidv4() : msg.id;
 			msgObj.sentDateTime = new Date().toISOString();
 		}else{
 			msgObj.lastRetryDateTime = new Date().toISOString();

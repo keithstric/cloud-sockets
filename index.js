@@ -246,7 +246,6 @@ function createEventListener(channel) {
 	const listenerCount = global.socketEmitter.listenerCount(channel);
 	if (listenerCount === 0) {
 		global.socketEmitter.addListener(channel, eventHandler);
-		// console.log(`createEventListener, created listener for ${channel}, we now have ${global.websocketEmitter.listenerCount(channel)} listeners`);
 	}
 }
 /**
@@ -279,7 +278,7 @@ function pubsubHandler(message) {
 			response.pubsubId = message.id;
 			const {subId, channel} = response;
 			// We can't just pass it on to the msgDirector.handleMessage because we'll end up in a loop
-			msgDirector.announce(response, channel, subId);
+			msgDirector.announce(null, response, channel, subId);
 		}
 	}
 }
