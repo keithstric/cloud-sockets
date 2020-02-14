@@ -219,7 +219,11 @@ function getInfoDetail(ws, msg) {
 	info = {...info, ...channelMgr.getInfoDetail(msg.channel)};
 	return info;
 }
-
+/**
+ * Gathers basic information
+ * @param {WebSocket} ws
+ * @param {any} msg
+ */
 function getInfo(ws, msg) {
 	let info = {
 		type: 'getInfo',
