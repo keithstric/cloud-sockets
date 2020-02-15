@@ -89,6 +89,9 @@ module.exports = function socketServer(serverConfig, cloudWsOptions) {
 	wsServer = new Server(wsConfig);
 	channelMgr = new ChannelManager(options);
 	msgDirector = new MessageDirector(options, channelMgr);
+
+	// todo: Need to setup user authentication support
+
 	setupWsListeners();
 	console.log(`WebSocket server fired up on port ${wsServer.address().port}`);
 
