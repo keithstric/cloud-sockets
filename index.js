@@ -89,9 +89,9 @@ module.exports = function socketServer(serverConfig, cloudWsOptions) {
 	wsServer = new Server(wsConfig);
 	channelMgr = new ChannelManager(options);
 	msgDirector = new MessageDirector(options, channelMgr);
-	setupListeners();
+	setupWsListeners();
 	console.log(`WebSocket server fired up on port ${wsServer.address().port}`);
-	
+
 	// Middleware function
 	return function(req, res, next) {
 		req.cloud_sockets = {
@@ -105,7 +105,7 @@ module.exports = function socketServer(serverConfig, cloudWsOptions) {
 /**
  * Sets up the socket server event listeners
  */
-function setupListeners() {
+function setupWsListeners() {
 	wsServer.on('connection', (ws, req) => {
 		if (!connectionsMap.has(ws)) {
 			connectionsMap.set(ws, {});
@@ -177,6 +177,7 @@ function onSubscribe(ws, msg) {
 		}else{
 			connObj[channel] = [subId]
 		}
+		connectionsMap.set(ws, connObj);
 		createEventListener(channel);
 	}
 }
@@ -198,6 +199,7 @@ function onUnsubscribe(ws, msg) {
 			}else{
 				delete connObj[channel];
 			}
+			connectionsMap.set(ws, connObj);
 		}
 		const channelConns = channelMgr.getChannelConnections(channel);
 		if (channelConns && !channelConns.length) {
@@ -247,9 +249,9 @@ function getInfo(ws, msg) {
  * @param {string} channel
  */
 function createEventListener(channel) {
-	const listenerCount = global.socketEmitter.listenerCount(channel);
+	const listenerCount = socketEmitter.listenerCount(channel);
 	if (listenerCount === 0) {
-		global.socketEmitter.addListener(channel, eventHandler);
+		socketEmitter.addListener(channel, eventHandler);
 	}
 }
 /**
@@ -272,7 +274,7 @@ function eventHandler(channel, subId, type, payload) {
 }
 /**
  * Handles messages from PubSub
- * @param {Message} message 
+ * @param {Message} message
  */
 function pubsubHandler(message) {
 	if (message) {
