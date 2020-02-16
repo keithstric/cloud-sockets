@@ -13,12 +13,13 @@
   "keywords": [
     "WebSockets",
     "ws",
-    "express"
+    "express",
+    "middleware",
+    "boilerplate"
   ],
   "author": {
     "email": "keithstric@gmail.com",
-    "name": "Keith Strickland",
-    "url": "http://keithstric.me"
+    "name": "Keith Strickland"
   },
   "license": "Apache2",
   "dependencies": {

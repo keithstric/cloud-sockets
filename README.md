@@ -1,6 +1,11 @@
 # cloud-sockets
 
-A websocket boilerplate using [ws](https://www.npmjs.com/package/ws) for nodejs
+A websocket implementation using [ws](https://www.npmjs.com/package/ws) for nodejs. This project provides the base infrastructure for a WebSocket project with the following features:
+
+* Defined Message types
+* Customizable Message types
+* PubSub support
+* Event Handler
 
 ## Installation
 
@@ -224,3 +229,14 @@ const awaitingAck = {
 	}]
 }
 ```
+
+## How to contribute
+
+### Did you find a bug?
+
+* **Ensure the bug was not already reported** by searching the GitHub [issues](https://github.com/keithstric/cloud-sockets/issues)
+* If you can't find a bug report, [open a new issue](https://github.com/keithstric/cloud-sockets/issues/new). Be sure to include a title and clear description with as much relevant information as possible. Code snippets or test cases demonstrating the problem are most welcome.
+
+### Did you write a patch that fixes a bug or adds new features?
+
+Just submit a Pull Request. Ensure the PR description clearly describes the problem and solution. Include the relevant issue number if applicable.
