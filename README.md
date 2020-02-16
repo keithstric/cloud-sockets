@@ -123,7 +123,7 @@ Subscribe the provided WebSocket to a channel subscription
 
 **unsubscribe(ws: WebSocket, channel?: string, subId?: string)**
 
-Unsubscribe from a channel subscription. 
+Unsubscribe from a channel subscription.
 
 * If no `subId` is provided, will unsubscribe from all subscriptions inside a channel
 * If no `channel` or `subId` is provided will unsubscribe from all channels
@@ -169,7 +169,7 @@ The following options are available for customization of cloud-sockets.
 
 ## Custom Message Handlers
 
-You can define custom message handlers in the cloud-sockets options. These allow you to add your own logic to certain message types. The function provided will be passed 3 arguments: The originating WebSocket, the message and the current instance of the MessageDirector.
+You can define custom message handlers in the cloud-sockets options. These allow you to add your own logic to certain message types. The function provided will be passed 3 arguments: The originating WebSocket, the message and the current instance of the MessageDirector. You can see an example in the [custom-handler examples](http://github.com/keithstric/cloud-sockets/tree/master/examples/custom-handler).
 
 ## Process flow
 

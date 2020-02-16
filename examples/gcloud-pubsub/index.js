@@ -15,7 +15,7 @@ const socketOptions = {
 	pubSubSubscriptionName: 'api-service',
 	pubsubMessageTypes: ['announceEvent']
 };
-global.server.use(socketServer, {server: global.server, port: 8080}, socketOptions);
+global.server.use(socketServer({server: global.server, port: 8080}, socketOptions));
 
 global.server.listen(3000, () =>{
 	console.log(`gcloud-pubsub example listening on port 3000`);

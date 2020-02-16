@@ -1,5 +1,5 @@
 'use strict'
-const Server = require('ws').Server;
+const WsServer = require('ws').Server;
 const EventEmitter = require('events').EventEmitter;
 const MessageDirector = require('./MessageDirector');
 const ChannelManager = require('./ChannelManager');
@@ -14,10 +14,7 @@ const connectionsMap = new Map();
 /**
  * WebSocket server configuration
  */
-let wsConfig = {
-	server: global.server,
-	port: 30010
-};
+let wsConfig = {};
 /**
  * default cloud-ws options
  */
@@ -84,16 +81,21 @@ let msgDirector;
 let channelMgr;
 
 module.exports = function socketServer(serverConfig, cloudWsOptions) {
+	wsConfig.server = serverConfig ? serverConfig.server : global.server;
 	options = {...options, ...cloudWsOptions};
 	wsConfig = {...wsConfig, ...serverConfig};
-	wsServer = new Server(wsConfig);
+	wsServer = new WsServer(wsConfig);
 	channelMgr = new ChannelManager(options);
 	msgDirector = new MessageDirector(options, channelMgr);
 
 	// todo: Need to setup user authentication support
 
 	setupWsListeners();
-	console.log(`WebSocket server fired up on port ${wsServer.address().port}`);
+	if (wsServer.address()) {
+		console.log(`WebSocket server fired up on port ${wsServer.address().port}`);
+	}else{
+		console.log(`WebSocket server fired up`);
+	}
 
 	// Middleware function
 	return function(req, res, next) {
@@ -234,7 +236,7 @@ function getInfo(ws, msg) {
 		type: 'getInfo',
 		serverInfo: {
 			port: wsServer.address.port,
-			eventEmitters: global.socketEmitter.eventNames(),
+			eventEmitterListeners: global.socketEmitter.eventNames(),
 			customPubSub: !!(options.pubsubListener && options.pubsubPublisher),
 			options: {...options, customMsgHandlers: Object.keys(options.customMsgHandlers)}
 		},
