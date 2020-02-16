@@ -96,7 +96,8 @@ class MessageDirector {
 	/**
 	 * Send a message to all connections, a specific channel's connections or
 	 * a subscription's connections. If no subId, will send to entire channel
-	 * if no channel will send to everybody
+	 * if no channel will send to everybody. The originating WebSocket will not
+	 * receive this message
 	 * @param {WebSocket} origWs - Originating WebSocket or null
 	 * @param {any} msg
 	 * @param {string} channel?

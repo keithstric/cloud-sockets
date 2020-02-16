@@ -11,6 +11,12 @@ app.use(express.urlencoded({extended: true}));
 // Setup your custom-message handlers
 const customHandlers = require('./cloud-sockets-impl');
 const socketOptions = {
+	/**
+	 * customMsgHandlers should be an object, whose keys are the message types with a value
+	 * of a function which does something. This function will have the following arguments
+	 * provided: WebSocket, the message and the current instance of the MessageDirector
+	 * @property {{<messageType>:string : handler:function}} customMsgHandlers
+	 */
 	customMsgHandlers: {'customMessageType': customHandlers.customMsgHandler}
 };
 // Define the cloud-sockets middleware after all your other middleware
