@@ -67,3 +67,15 @@ test('it should create an event listener', () => {
 	createEvtListener('foo');
 	expect(emitter.listenerCount('foo')).toEqual(1);
 });
+
+test('it should call the eventHandler upon receiving an event', () => {
+	app.__set__('socketEmitter', new EventEmitter());
+	const emitter = app.__get__('socketEmitter');
+	const createEventListener = app.__get__('createEventListener');
+	const mockEventHandler = jest.fn();
+	app.__set__('eventHandler', mockEventHandler);
+	createEventListener('foo');
+	const hasListener = emitter.emit('foo', 'foo', 'bar', 'announce', 'Event Emitter Test');
+	expect(hasListener).toBe(true);
+	expect(mockEventHandler).toHaveBeenCalled();
+});
