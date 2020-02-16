@@ -1,13 +1,15 @@
 'use strict'
 const express = require('express');
+const http = require('http');
+const socketServer = require('../../index');
+const pubSubFunctions = require('./cloud-sockets-impl');
 
-global.server = express();
+const app = express();
+global.server = http.createServer(app);
 
 global.server.use(express.json());
 global.server.use(express.urlencoded({extended: true}));
 
-const socketServer = require('../../index');
-const pubSubFunctions = require('./cloud-sockets-impl');
 const socketOptions = {
 	pubsubListener: pubSubFunctions.gcloudPubsubListener,
 	pubsubPublisher: pubSubFunctions.gcloudPubsubPublisher,

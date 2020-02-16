@@ -5,7 +5,7 @@ const socketServer = require('../../index');
 const customHandlers = require('./cloud-sockets-impl');
 
 const app = express();
-global.server = http.createServer();
+global.server = http.createServer(app);
 
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
