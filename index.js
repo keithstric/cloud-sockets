@@ -91,11 +91,7 @@ module.exports = function socketServer(serverConfig, cloudWsOptions) {
 	// todo: Need to setup user authentication support
 
 	setupWsListeners();
-	if (wsServer.address()) {
-		console.log(`WebSocket server fired up on port ${wsServer.address().port}`);
-	}else{
-		console.log(`WebSocket server fired up`);
-	}
+	console.log(`WebSocket server fired up`);
 
 	// Middleware function
 	return function(req, res, next) {
