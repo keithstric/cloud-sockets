@@ -239,4 +239,4 @@ const awaitingAck = {
 
 ### Did you write a patch that fixes a bug or adds new features?
 
-Just submit a Pull Request. Ensure the PR description clearly describes the problem and solution. Include the relevant issue number if applicable.
+Just submit a Pull Request. Ensure the PR description clearly describes the problem and solution. Include the relevant issue number if applicable. Be sure to include unit tests for your change.
