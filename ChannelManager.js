@@ -14,7 +14,7 @@ class ChannelManager {
 	/**
 	 * Get a channel map
 	 * @param {string} channel 
-	 * @returns {Map<string, WebSocket[]}
+	 * @returns {Map<string, WebSocket[]>}
 	 */
 	getChannelMap(channel) {
 		return this.channelMaps[channel];
@@ -22,8 +22,8 @@ class ChannelManager {
 	/**
 	 * Set a channel map
 	 * @param {string} channel 
-	 * @param {Map<string, WebSocket[]} channelMap 
-	 * @returns {Map<string, WebSocket[]}
+	 * @param {Map<string, WebSocket[]>} channelMap
+	 * @returns {Map<string, WebSocket[]>}
 	 */
 	setChannelMap(channel, channelMap) {
 		if (!channelMap) {
@@ -71,7 +71,7 @@ class ChannelManager {
 		channels.forEach((channel) => {
 			const channelConns = this.getChannelConnections(channel);
 			conns = [...conns, ...channelConns];
-		})
+		});
 		return conns;
 	}
 	/**
@@ -172,13 +172,13 @@ class ChannelManager {
 				}
 			});
 			if (!channelMap.size) {
-				delete this.channelMaps[channel]
+				delete this.channelMaps[channel];
 				channelDelCount++;
 			}else{
 				this.setChannelMap(channel, channelMap);
 			}
 		});
-		return {subsDeleted: subDelCount, channelsDeleted: channelDelCount};
+		return {subscriptionsDeleted: subDelCount, channelsDeleted: channelDelCount};
 	}
 	/**
 	 * Will provide the connection information for a specific channel or all channels.
@@ -204,8 +204,7 @@ class ChannelManager {
 	 * Will provide the connection information for a specific channel or all channels.
 	 * If there is no `channel` property in the msg, then it will return connection info
 	 * for all channels.
-	 * @param {string} channel?
-	 * @returns {type: string, {[<key: string>], {subId: string, numConnections: number}[]}}  
+	 * @returns {type: string, {[<key: string>], {subId: string, numConnections: number}[]}}
 	 */
 	getInfo() {
 		let payload = {

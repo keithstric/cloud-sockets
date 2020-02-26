@@ -9,8 +9,7 @@ class MessageDirector {
 	/**
 	 * The message director handles the processing of all messages and maintains the que of any
 	 * messages awaiting an acknowledgement from the client
-	 * @param {string[]} acknowledgementTypes Array of message types which the client should acknowledge
-	 * @param {{<key: string>: function}} customMessageHandlers key is a message type whose value is the handler function
+	 * @param {any} options
 	 * @param {ChannelManager} channelMgr?
 	 * @returns {MessageDirector}
 	 */
@@ -125,7 +124,6 @@ class MessageDirector {
 	 * awaiting acknowledgement. If a channel is provided will only return info
 	 * about that channel. If a channel is not provided will provide info about
 	 * all channels.
-	 * @param {string} channel?
 	 */
 	getInfoDetail() {
 		const info = this.getInfo();
@@ -141,14 +139,13 @@ class MessageDirector {
 	}
 	/**
 	 * Get the basic information about the MessageDirector
-	 * @param {string} channel
 	 */
 	getInfo() {
 		let info = {
 			messageInfo: {
 				totalConnectionsAwaitingAck: this.awaitingAck.size
 			},
-		}
+		};
 		let totalAwaitingMsgs = 0;
 		const awaitingKeys = [...this.awaitingAck.keys()];
 		awaitingKeys.forEach((ws) => {
@@ -162,7 +159,7 @@ class MessageDirector {
 	 * Send a payload to the supplied WebSocket and add the message to the
 	 * awaitingAck object if needed
 	 * @param {WebSocket} ws
-	 * @param {any} payload This must be an object that may/may not be stringified
+	 * @param {any} msg This must be an object that may/may not be stringified
 	 */
 	sendMessage(ws, msg) {
 		if (ws && msg) {
@@ -203,7 +200,8 @@ class MessageDirector {
 	/**
 	 * Remove a message from the awaitingAck object and stop
 	 * the interval for resending the message
-	 * @param {string} ackId
+	 * @param {WebSocket} ws
+	 * @param {any} msg
 	 */
 	_removeAwaitingAck(ws, msg) {
 		if (ws && msg) {
@@ -235,7 +233,7 @@ class MessageDirector {
 	 */
 	_uuidv4() {
 		return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-			var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+			const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
 			return v.toString(16);
 		});
 	}

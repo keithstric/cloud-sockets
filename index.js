@@ -66,7 +66,7 @@ let options = {
 };
 /**
  * Websocket server
- * @type {Server}
+ * @type {WebSocketServer}
  */
 let wsServer;
 /**
@@ -84,7 +84,7 @@ module.exports = function socketServer(serverConfig, cloudWsOptions) {
 	wsConfig.server = serverConfig ? serverConfig.server : global.server;
 	options = {...options, ...cloudWsOptions};
 	wsConfig = {...wsConfig, ...serverConfig};
-	wsServer = new WsServer(wsConfig);
+	wsServer = new WsServer(wsConfig, null);
 	channelMgr = new ChannelManager(options);
 	msgDirector = new MessageDirector(options, channelMgr);
 
