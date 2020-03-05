@@ -82,6 +82,12 @@ let msgDirector;
  */
 let channelMgr;
 
+/**
+ * Sets up the WebSocket server and all required modules
+ * @param {any} serverConfig
+ * @param {any} cloudWsOptions
+ * @returns {function(...[*]=)}
+ */
 module.exports.socketServer = function socketServer(serverConfig, cloudWsOptions) {
 	wsConfig.server = serverConfig ? serverConfig.server : global.server;
 	options = {...options, ...cloudWsOptions};
@@ -109,16 +115,28 @@ module.exports.socketServer = function socketServer(serverConfig, cloudWsOptions
 };
 
 /**
+ * Should be called from express as the http server upgrade event function.
+ * @param {Request} req
+ * @param {WebSocket} socket
+ * @param {any} head
+ */
+module.exports.handleHttpServerUpgrade = function handleHttpServerUpgrade(req, socket, head) {
+	const {sessionParser} = options;
+	sessionParser(req, {}, () => {
+		wsServer.handleUpgrade(req, socket, head, (ws) => {
+			wsServer.emit('connection', ws, req);
+		});
+	});
+};
+
+/**
  * Sets up the socket server event listeners
  */
 function setupWsListeners() {
-	console.log('Setup WebSocket Server listeners');
 	const {sessionParser, setupHttpUser, sessionUserPropertyName} = options;
 
 	wsServer.on('connection', (ws, req) => {
-		console.log('cloud-sockets:index.js, wsServer.on connection');
 		if (setupHttpUser && req && req.session && req.session[sessionUserPropertyName]) {
-			console.log('cloud-sockets:index.js, connection, setup user');
 			channelMgr.setupUser(req.session[sessionUserPropertyName], ws);
 		}
 
@@ -162,18 +180,6 @@ function setupWsListeners() {
 		subscription.on('message', pubsubHandler);
 	}
 }
-
-module.exports.handleHttpServerUpgrade = function handleHttpServerUpgrade(req, socket, head) {
-	console.log('cloud-sockets:index.js handleHttpServerUpgrade, wsServer upgrade');
-	const {sessionUserPropertyName, sessionParser} = options;
-	sessionParser(req, {}, () => {
-		console.log('cloud-sockets:index.js handleHttpServerUpgrade, sessionParser');
-		wsServer.handleUpgrade(req, socket, head, (ws) => {
-			console.log('cloud-sockets:index.js handleHttpServerUpgrade, sessionParser, handleUpgrade callback');
-			wsServer.emit('connection', ws, req);
-		});
-	});
-};
 
 /**
  * Cleans up the connections after an error or close connection

@@ -292,6 +292,8 @@ class ChannelManager {
 						this.userMap.set(userProp, [...userSockets, ws]);
 					}
 				});
+			}else{
+				throw new Error('You must provide includeUserProps to support sending notifications to specific users');
 			}
 		}else {
 			throw new Error('Unsupported User type');

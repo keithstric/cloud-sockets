@@ -127,6 +127,12 @@ class MessageDirector {
 		});
 	}
 
+	/**
+	 * Send a notification directly to a user
+	 * @param {WebSocket} origWs
+	 * @param {any} msg
+	 * @param {string} userTag
+	 */
 	notifyUser(origWs, msg, userTag) {
 		let conns = [];
 		if (userTag) {
