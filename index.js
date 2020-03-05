@@ -62,7 +62,9 @@ let options = {
 	 */
 	msgResendDelay: 60000,
 	setupHttpUser: false,
-	includeUserProps: []
+	includeUserProps: [],
+	sessionParser: null,
+	sessionUserPropertyName: 'user'
 };
 /**
  * Websocket server
@@ -80,21 +82,23 @@ let msgDirector;
  */
 let channelMgr;
 
-module.exports = function socketServer(serverConfig, cloudWsOptions) {
+module.exports.socketServer = function socketServer(serverConfig, cloudWsOptions) {
 	wsConfig.server = serverConfig ? serverConfig.server : global.server;
 	options = {...options, ...cloudWsOptions};
 	wsConfig = {...wsConfig, ...serverConfig};
-	wsServer = new WsServer(wsConfig, null);
+	wsServer = new WsServer(wsConfig, function() {
+		console.log('cloud-sockets:index.js, new WsServer callback', arguments);
+	});
 	channelMgr = new ChannelManager(options);
 	msgDirector = new MessageDirector(options, channelMgr);
 
 	// todo: Need to setup user authentication support
-
 	setupWsListeners();
 	console.log(`WebSocket server fired up`);
 
 	// Middleware function
-	return function(req, res, next) {
+	return function (req, res, next) {
+		console.log('cloud-sockets middleware function');
 		req.cloud_sockets = {
 			msgDirector: msgDirector,
 			channelMgr: channelMgr,
@@ -102,12 +106,22 @@ module.exports = function socketServer(serverConfig, cloudWsOptions) {
 		};
 		next();
 	}
-}
+};
+
 /**
  * Sets up the socket server event listeners
  */
 function setupWsListeners() {
+	console.log('Setup WebSocket Server listeners');
+	const {sessionParser, setupHttpUser, sessionUserPropertyName} = options;
+
 	wsServer.on('connection', (ws, req) => {
+		console.log('cloud-sockets:index.js, wsServer.on connection');
+		if (setupHttpUser && req && req.session && req.session[sessionUserPropertyName]) {
+			console.log('cloud-sockets:index.js, connection, setup user');
+			channelMgr.setupUser(req.session[sessionUserPropertyName], ws);
+		}
+
 		if (!connectionsMap.has(ws)) {
 			connectionsMap.set(ws, {});
 			msgDirector.sendMessage(ws, {
@@ -122,12 +136,12 @@ function setupWsListeners() {
 			const msg = JSON.parse(message);
 			if (msg.type === 'subscribe') {
 				onSubscribe(ws, msg);
-			}else if (msg.type === 'unsubscribe') {
+			} else if (msg.type === 'unsubscribe') {
 				onUnsubscribe(ws, msg);
-			}else if (msg.type === 'getInfoDetail') {
+			} else if (msg.type === 'getInfoDetail') {
 				const info = getInfoDetail(ws, msg);
 				msgDirector.sendMessage(ws, info);
-			}else if (msg.type === 'getInfo') {
+			} else if (msg.type === 'getInfo') {
 				const info = getInfo(ws, msg);
 				msgDirector.sendMessage(ws, info);
 			}
@@ -148,6 +162,19 @@ function setupWsListeners() {
 		subscription.on('message', pubsubHandler);
 	}
 }
+
+module.exports.handleHttpServerUpgrade = function handleHttpServerUpgrade(req, socket, head) {
+	console.log('cloud-sockets:index.js handleHttpServerUpgrade, wsServer upgrade');
+	const {sessionUserPropertyName, sessionParser} = options;
+	sessionParser(req, {}, () => {
+		console.log('cloud-sockets:index.js handleHttpServerUpgrade, sessionParser');
+		wsServer.handleUpgrade(req, socket, head, (ws) => {
+			console.log('cloud-sockets:index.js handleHttpServerUpgrade, sessionParser, handleUpgrade callback');
+			wsServer.emit('connection', ws, req);
+		});
+	});
+};
+
 /**
  * Cleans up the connections after an error or close connection
  */
@@ -164,6 +191,7 @@ function cleanupConnections(ws, connObj) {
 		});
 	}
 }
+
 /**
  * Adds subscriptions to the connection object for the provided WebSocket
  * @param {WebSocket} ws
@@ -175,13 +203,14 @@ function onSubscribe(ws, msg) {
 		const connObj = connectionsMap.get(ws) || {};
 		if (connObj && connObj[channel]) {
 			connObj[channel] = [...connObj[channel], subId];
-		}else{
+		} else {
 			connObj[channel] = [subId]
 		}
 		connectionsMap.set(ws, connObj);
 		createEventListener(channel);
 	}
 }
+
 /**
  * Removes subscriptions from the connection object for the provided WebSocket
  * @param {WebSocket} ws
@@ -197,7 +226,7 @@ function onUnsubscribe(ws, msg) {
 				if (subIdx > -1) {
 					connObj[channel].splice(subIdx, 1);
 				}
-			}else{
+			} else {
 				delete connObj[channel];
 			}
 			connectionsMap.set(ws, connObj);
@@ -208,6 +237,7 @@ function onUnsubscribe(ws, msg) {
 		}
 	}
 }
+
 /**
  * Gathers information from the MessageHandler and ChannelManager then
  * includes information about the configuration and connections
@@ -222,6 +252,7 @@ function getInfoDetail(ws, msg) {
 	info = {...info, ...channelMgr.getInfoDetail(msg.channel)};
 	return info;
 }
+
 /**
  * Gathers basic information
  * @param {WebSocket} ws
@@ -244,6 +275,7 @@ function getInfo(ws, msg) {
 	info = {...info, ...channelMgr.getInfo()};
 	return info;
 }
+
 /**
  * Creates an event listener for the defined type. Type comes from the
  * subscription message from the client.
@@ -255,6 +287,7 @@ function createEventListener(channel) {
 		socketEmitter.addListener(channel, eventHandler);
 	}
 }
+
 /**
  * Event handler to send messages. These parameters should be provided
  * by the emit call
@@ -273,6 +306,7 @@ function eventHandler(channel, subId, type, payload) {
 	};
 	msgDirector.handleMsg(null, message);
 }
+
 /**
  * Handles messages from PubSub
  * @param {Message} message

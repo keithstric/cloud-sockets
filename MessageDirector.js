@@ -28,6 +28,7 @@ class MessageDirector {
 		 */
 		this.awaitingAck = new Map();
 	}
+
 	/**
 	 * Provided a message, will decide what to do with that message based on the
 	 * message's type property
@@ -55,22 +56,26 @@ class MessageDirector {
 					break;
 				case 'getInfoDetail':
 					break;
+				case 'notification':
+					this.notifyUser(ws, msg, msg.userTag);
+					break;
 				default:
 					if (msg.type && this.customMsgHandlers && this.customMsgHandlers[msg.type]) {
 						const formattedMsg = this.formatMessage(msg);
 						this.customMsgHandlers[msg.type](ws, formattedMsg, this);
-					}else if (msg.type && this.pubsubMessageTypes && this.pubsubMessageTypes.indexOf(msg.type) > -1) {
+					} else if (msg.type && this.pubsubMessageTypes && this.pubsubMessageTypes.indexOf(msg.type) > -1) {
 						if (this.pubsubPublisher && this.pubsubTopic) {
 							const formattedMsg = this.formatMessage(msg);
 							this.pubsubPublisher(this.pubsubTopic, formattedMsg);
 						}
-					}else{
+					} else {
 						let err = {type: 'error', value: `Message type "${msg.type}" not supported`, msg: msg};
 						this.sendMessage(ws, err);
 					}
 			}
 		}
 	}
+
 	/**
 	 * Subscribe to a subscription inside a channel
 	 * @param {WebSocket} ws
@@ -81,6 +86,7 @@ class MessageDirector {
 		const ack = this.channelMgr.subscribeChannel(ws, channel, subId);
 		this.sendMessage(ws, ack);
 	}
+
 	/**
 	 * Unsubscribe from a subscription. If no subId is provided will unsubscribe from all
 	 * subscriptions in a channel
@@ -92,6 +98,7 @@ class MessageDirector {
 		const ack = this.channelMgr.unsubscribeChannel(ws, channel, subId);
 		this.sendMessage(ws, ack);
 	}
+
 	/**
 	 * Send a message to all connections, a specific channel's connections or
 	 * a subscription's connections. If no subId, will send to entire channel
@@ -107,10 +114,10 @@ class MessageDirector {
 		if (channel) {
 			if (subId) {
 				conns = this.channelMgr.getChannelSubConnections(channel, subId);
-			}else{
+			} else {
 				conns = this.channelMgr.getChannelConnections(channel);
 			}
-		}else{
+		} else {
 			conns = this.channelMgr.getAllConnections();
 		}
 		conns.forEach((ws) => {
@@ -119,6 +126,27 @@ class MessageDirector {
 			}
 		});
 	}
+
+	notifyUser(origWs, msg, userTag) {
+		let conns = [];
+		if (userTag) {
+			conns = this.channelMgr.getUserConnections(userTag);
+		}
+		if (conns.length) {
+			conns.forEach((ws) => {
+				if (ws !== origWs) {
+					this.sendMessage(ws, msg);
+				}
+			});
+		}else{
+			const notOnlineMsg = {
+				type: 'notification',
+				payload: `User with user tag ${userTag} is not online`
+			};
+			this.sendMessage(origWs, notOnlineMsg);
+		}
+	}
+
 	/**
 	 * Get information about the various channels, subscriptions and messages
 	 * awaiting acknowledgement. If a channel is provided will only return info
@@ -137,6 +165,7 @@ class MessageDirector {
 		info.messageInfo.awaitingMessages = awaitingMsgArr;
 		return info;
 	}
+
 	/**
 	 * Get the basic information about the MessageDirector
 	 */
@@ -155,6 +184,7 @@ class MessageDirector {
 		info.messageInfo.totalAwaitingMsgs = totalAwaitingMsgs;
 		return info;
 	}
+
 	/**
 	 * Send a payload to the supplied WebSocket and add the message to the
 	 * awaitingAck object if needed
@@ -172,10 +202,11 @@ class MessageDirector {
 			if (this.acknowledgementTypes && this.acknowledgementTypes.indexOf(msgObj.type) > -1 && !msgObj.isRetry) {
 				this._addAwaitingAck(ws, msgObj);
 			}
-		}else{
+		} else {
 			// throw error?
 		}
 	}
+
 	/**
 	 * Add a message to the awaitingAck object
 	 * @param {WebSocket} ws
@@ -197,6 +228,7 @@ class MessageDirector {
 			this.awaitingAck.set(ws, wsMsgs);
 		}
 	}
+
 	/**
 	 * Remove a message from the awaitingAck object and stop
 	 * the interval for resending the message
@@ -220,23 +252,25 @@ class MessageDirector {
 					wsMsgs.splice(awaitingObjIdx, 1);
 					if (!wsMsgs.length) {
 						this.awaitingAck.delete(ws);
-					}else{
+					} else {
 						this.awaitingAck.set(ws, wsMsgs);
 					}
 				}
 			}
 		}
 	}
+
 	/**
 	 * Create a uuid
 	 * @returns {string}
 	 */
 	_uuidv4() {
-		return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+		return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
 			const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
 			return v.toString(16);
 		});
 	}
+
 	/**
 	 * Gets a message ready for sending. Adds an id and sentDateTime properties
 	 * then stringifies it.
@@ -250,7 +284,7 @@ class MessageDirector {
 		if (!msgObj.isRetry) {
 			msgObj.id = !msg.id ? this._uuidv4() : msg.id;
 			msgObj.sentDateTime = new Date().toISOString();
-		}else{
+		} else {
 			msgObj.lastRetryDateTime = new Date().toISOString();
 		}
 		return JSON.stringify(msgObj);

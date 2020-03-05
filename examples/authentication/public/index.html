@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>cloud-sockets authentication example</title>
+	<style>
+		pre {
+			height: 400px;
+			overflow: scroll;
+		}
+		.formContainer {
+			display: flex;
+			flex-direction: column;
+		}
+		.buttonContainer {
+			display: flex;
+			flex-direction: row;
+			margin-top: 10px;
+		}
+		.buttonContainer button {
+			margin-right: 10px;
+		}
+	</style>
+</head>
+<body>
+	<h2>cloud-sockets authentication example</h2>
+	<div class="formContainer">
+		<input id="email" type="email" name="email" value="keith.strickland@knowhere.com">
+		<div class="buttonContainer">
+			<button id="login" type="button">Simulate Login</button>
+			<button id="logout" type="button">Simulate Logout</button>
+		</div>
+		<div class="buttonContainer">
+			<button id="wsConnect" type="button">Open WebSocket connection</button>
+			<button id="wsSend" type="button">Send WebSocket Message</button>
+		</div>
+	</div>
+	<pre id="messages"></pre>
+	<script src="app.js"></script>
+</body>
+</html>

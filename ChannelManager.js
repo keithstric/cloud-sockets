@@ -8,20 +8,33 @@
 class ChannelManager {
 
 	constructor(options) {
+		/**
+		 * Channel maps
+		 * @type {{[key: string]: Map<string, WebSocket[]>}}
+		 */
 		this.channelMaps = {};
+		/**
+		 * A map of users.The key will be items in the includeUserProps array or the user id and
+		 * the value will be that user's WebSocket connection. This is used
+		 * mainly for user notifications via @someUser
+		 * @type {Map<string, WebSocket[]>}
+		 */
+		this.userMap = new Map();
 		this.includeUserProps = options ? options.includeUserProps : [];
 	}
+
 	/**
 	 * Get a channel map
-	 * @param {string} channel 
+	 * @param {string} channel
 	 * @returns {Map<string, WebSocket[]>}
 	 */
 	getChannelMap(channel) {
 		return this.channelMaps[channel];
 	}
+
 	/**
 	 * Set a channel map
-	 * @param {string} channel 
+	 * @param {string} channel
 	 * @param {Map<string, WebSocket[]>} channelMap
 	 * @returns {Map<string, WebSocket[]>}
 	 */
@@ -32,10 +45,11 @@ class ChannelManager {
 		this.channelMaps[channel] = channelMap;
 		return this.channelMaps[channel];
 	}
+
 	/**
 	 * Get a channel subscription's connections
-	 * @param {string} channel 
-	 * @param {string} subId 
+	 * @param {string} channel
+	 * @param {string} subId
 	 */
 	getChannelSubConnections(channel, subId) {
 		const channelMap = this.getChannelMap(channel);
@@ -44,6 +58,7 @@ class ChannelManager {
 		}
 		return [];
 	}
+
 	/**
 	 * Get all the connections for a specific channel
 	 * @param {string} channel
@@ -61,6 +76,7 @@ class ChannelManager {
 		}
 		return allConns;
 	}
+
 	/**
 	 * Get all the connections for all channels
 	 * @returns {WebSocket[]}
@@ -74,13 +90,14 @@ class ChannelManager {
 		});
 		return conns;
 	}
+
 	/**
 	 * Subscribes to a channel subscription. This adds the provided
 	 * WebSocket to a subscription's connections
-	 * @param {WebSocket} ws 
-	 * @param {string} channel 
+	 * @param {WebSocket} ws
+	 * @param {string} channel
 	 * @param {string} subId
-	 * @returns {{type: string, channel: string, subId: string, numConnections: number}} 
+	 * @returns {{type: string, channel: string, subId: string, numConnections: number}}
 	 */
 	subscribeChannel(ws, channel, subId) {
 		let ack = {type: 'ack', subId: subId, channel: channel};
@@ -92,8 +109,8 @@ class ChannelManager {
 				if (idx === -1) {
 					subConns.push(ws);
 					channelMap.set(subId, subConns);
-				} 
-			}else{
+				}
+			} else {
 				channelMap.set(subId, [ws]);
 			}
 			this.setChannelMap(channel, channelMap);
@@ -101,12 +118,13 @@ class ChannelManager {
 		}
 		return ack;
 	}
+
 	/**
 	 * Provided a channel, will loop through all the subscriptions and if the provided
 	 * websocket is in the array of subscription connections, will remove the provided
 	 * websocket. If a subId is provided, will only cleanup that subscription's connections
-	 * @param {WebSocket} ws 
-	 * @param {string} channel 
+	 * @param {WebSocket} ws
+	 * @param {string} channel
 	 * @param {string} subId?
 	 * @returns {{type: string, subId: string, channel: string, removedConnectionCount: number, subscriptionsDeleted: number, channelsDeleted: number}}
 	 */
@@ -119,7 +137,7 @@ class ChannelManager {
 				const startSubConnsLen = this.getChannelSubConnections(channel, subId).length;
 				updatedSubConns = this._removeSubWebSocket(ws, channel, subId);
 				opInfo.removedConnectionCount = startSubConnsLen - updatedSubConns.length;
-			}else if (channelMap && !subId) {
+			} else if (channelMap && !subId) {
 				let removedCount = 0;
 				[...channelMap.keys()].forEach((chanSubId) => {
 					const startSubConnsLen = this.getChannelSubConnections(channel, subId).length;
@@ -136,11 +154,12 @@ class ChannelManager {
 		}
 		return opInfo;
 	}
+
 	/**
 	 * Removes a WebSocket from the provided channel and subscription
-	 * @param {WebSocket} ws 
-	 * @param {string} channel 
-	 * @param {string} subId 
+	 * @param {WebSocket} ws
+	 * @param {string} channel
+	 * @param {string} subId
 	 * @returns {WebSocket[]}
 	 */
 	_removeSubWebSocket(ws, channel, subId) {
@@ -155,6 +174,7 @@ class ChannelManager {
 		}
 		return [];
 	}
+
 	/**
 	 * Removes any empty subscriptions and/or channels
 	 * @returns {{subscriptionsDeleted: number, channelsDeleted: number}}
@@ -174,25 +194,26 @@ class ChannelManager {
 			if (!channelMap.size) {
 				delete this.channelMaps[channel];
 				channelDelCount++;
-			}else{
+			} else {
 				this.setChannelMap(channel, channelMap);
 			}
 		});
 		return {subscriptionsDeleted: subDelCount, channelsDeleted: channelDelCount};
 	}
+
 	/**
 	 * Will provide the connection information for a specific channel or all channels.
 	 * If there is no `channel` property in the msg, then it will return connection info
 	 * for all channels.
 	 * @param {string} channel?
-	 * @returns {type: string, {[<key: string>], {subId: string, numConnections: number}[]}}  
+	 * @returns {type: string, {[<key: string>], {subId: string, numConnections: number}[]}}
 	 */
 	getInfoDetail(channel) {
 		let payload = this.getInfo(channel);
 		payload.channelInfo.channels = {};
 		if (channel) {
 			payload.channelInfo.channels[channel] = this._getChannelInfo(channel);
-		}else{
+		} else {
 			const channels = Object.keys(this.channelMaps);
 			channels.forEach((channel) => {
 				payload.channelInfo.channels[channel] = this._getChannelInfo(channel);
@@ -200,6 +221,7 @@ class ChannelManager {
 		}
 		return payload;
 	}
+
 	/**
 	 * Will provide the connection information for a specific channel or all channels.
 	 * If there is no `channel` property in the msg, then it will return connection info
@@ -221,10 +243,11 @@ class ChannelManager {
 		payload.channelInfo.totalSubscriptions = subCount;
 		return payload
 	}
+
 	/**
 	 * provided a channel will return an array of subscription names and the number
 	 * of connections for those subscriptions
-	 * @param {string} channel 
+	 * @param {string} channel
 	 */
 	_getChannelInfo(channel) {
 		const returnVal = [];
@@ -241,12 +264,51 @@ class ChannelManager {
 		}
 		return returnVal;
 	}
+
 	/**
-	 * Check if the channelMaps contain an entry for the user
-	 * @param {string} uniqUserIdentifier 
+	 * Setup a user in the userMap to support sending notifications
+	 * to a user
+	 * @param {string|Object} user
+	 * @param {WebSocket} ws
 	 */
-	hasUser(uniqUserIdentifier) {
-		return this.channelMaps[uniqUserIdentifier];
+	setupUser(user, ws) {
+		if (typeof user === 'string') {
+			// Assume this would be a user id or email address
+			if (!this.userMap.has(user)) {
+				this.userMap.set(user, [ws]);
+			}else{
+				const userSockets = this.userMap.get(user);
+				this.userMap.set(user, [...userSockets, ws]);
+			}
+		}else if (typeof user === 'object' && !Array.isArray(user)) {
+			// Assume this would be a user object
+			if (this.includeUserProps && this.includeUserProps.length) {
+				this.includeUserProps.forEach((propName) => {
+					const userProp = user[propName];
+					if (!this.userMap.has(userProp)) {
+						this.userMap.set(userProp, [ws]);
+					}else{
+						const userSockets = this.userMap.get(userProp);
+						this.userMap.set(userProp, [...userSockets, ws]);
+					}
+				});
+			}
+		}else {
+			throw new Error('Unsupported User type');
+		}
+	}
+
+	/**
+	 * Get a user's connections
+	 * @param {string} userTag
+	 * @returns {WebSocket[]}
+	 */
+	getUserConnections(userTag) {
+		let userConns = [];
+		if (userTag) {
+			userConns = this.userMap.get(userTag) || [];
+		}
+		return userConns;
 	}
 }
 

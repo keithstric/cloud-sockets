@@ -18,8 +18,8 @@ const pubSubFunctions = require('./cloud-sockets-impl');
  * @property {string[]} pubsubMessageTypes - The types of messages to send through pubsub
  */
 const socketOptions = {
-	pubsubListener: pubSubFunctions.gcloudPubsubListener,
-	pubsubPublisher: pubSubFunctions.gcloudPubsubPublisher,
+	pubsubListener: pubSubFunctions.listenForPubSubMessages,
+	pubsubPublisher: pubSubFunctions.publishPubSubMessages,
 	pubsubTopicName: 'some-topic-name',
 	pubSubSubscriptionName: 'api-service',
 	pubsubMessageTypes: ['announceEvent']
