@@ -312,6 +312,18 @@ class ChannelManager {
 		}
 		return userConns;
 	}
+
+	/**
+	 * Check if a user is online
+	 * @param {string} userTag
+	 * @returns {boolean}
+	 */
+	isUserOnline(userTag) {
+		if (userTag) {
+			return !!this.getUserConnections(userTag).length;
+		}
+		return false;
+	}
 }
 
 module.exports = ChannelManager;
