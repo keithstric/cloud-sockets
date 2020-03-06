@@ -24,9 +24,7 @@ app.use(sessionParser);
 
 // Setup your route handling
 app.post('/login', (req, res, next) => {
-	console.log(`request with a body of ${JSON.stringify(req.body, null, 2)} received`);
 	const uuidStr = uuid.v4();
-	console.log(`Updating session for user with id ${uuidStr}`);
 	if (req.body && req.body.email) {
 		const atIdx = req.body.email.indexOf('@');
 		const shortName = req.body.email.substring(0, atIdx);
@@ -35,7 +33,6 @@ app.post('/login', (req, res, next) => {
 			email: req.body.email,
 			shortName: shortName
 		};
-		next();
 		res.send({result: 'OK', message: `Session Updated with user`, user: `${JSON.stringify(req.session.user)}`});
 	}else{
 		res.status(500).send({result: 'ERROR', message: 'No body!'});
@@ -43,8 +40,11 @@ app.post('/login', (req, res, next) => {
 });
 
 app.delete('/logout', (req, res) => {
-	console.log('destroying session');
+	console.log(`destroying session for ${req.session.user.email}`);
 	req.session.destroy(() => {
+		if(req.session.cloud_sockets && req.session.cloud_sockets.ws) {
+			ws.destroy();
+		}
 		res.send({result: 'OK', message: 'Session Destroyed'});
 	});
 });

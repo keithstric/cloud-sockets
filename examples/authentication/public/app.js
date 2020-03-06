@@ -13,7 +13,7 @@
 
 		function handleResponse(response) {
 			return response.ok
-				? response.json().then((data) => {return JSON.stringify(data, null, 2)})
+				? response.json().then((data) => {return JSON.stringify(data, null, 4)})
 				: Promise.reject(new Error('Unexpected Response'));
 		}
 
