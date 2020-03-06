@@ -32,13 +32,13 @@
 				.catch((err) => {
 					showMessage(err.message);
 				});
-		}
+		};
 
 		logout.onclick = function() {
 			fetch('/logout', {method: 'DELETE', credentials: 'same-origin'})
 				.then(handleResponse)
 				.then(showMessage)
-		}
+		};
 
 		let ws;
 
@@ -73,8 +73,8 @@
 			}else{
 				const msg = {
 					type: 'notification',
-					payload: 'Hello World',
-					userTag: 'keith.strickland'
+					payload: 'Hello Knowhere',
+					userTag: 'the.collector'
 				};
 				ws.send(JSON.stringify(msg));
 				showMessage(`Sent to WebSocket server:\n${JSON.stringify(msg, null, 2)}`);

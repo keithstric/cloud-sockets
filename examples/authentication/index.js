@@ -17,15 +17,34 @@ const sessionParser = session({
 	secret: '$ecr3t',
 	resave: false
 });
-
 // Setup static site and sessionParser middleware
 app.use(express.static('public'));
 app.use(sessionParser);
 
+// Setup our cloud-sockets middleware
+// ws configuration
+const wsConfig = {
+	clientTracking: false,
+	noServer: true
+};
+// cloud-sockets options
+const csOptions = {
+	sessionParser: sessionParser,
+	setupHttpUser: true,
+	sessionUserPropertyName: 'user',
+	includeUserProps: ['shortName']
+};
+// Define the cloud-sockets middleware after all your other middleware
+const cloudSockets = require('../../index');
+app.use(cloudSockets.socketServer(wsConfig, csOptions));
+server.on('upgrade', cloudSockets.handleHttpServerUpgrade);
+
 // Setup your route handling
+// login route
 app.post('/login', (req, res, next) => {
 	const uuidStr = uuid.v4();
 	if (req.body && req.body.email) {
+		console.log(`creating session for ${req.body.email}`);
 		const atIdx = req.body.email.indexOf('@');
 		const shortName = req.body.email.substring(0, atIdx);
 		req.session.user = {
@@ -38,31 +57,14 @@ app.post('/login', (req, res, next) => {
 		res.status(500).send({result: 'ERROR', message: 'No body!'});
 	}
 });
-
+// logout route
 app.delete('/logout', (req, res) => {
-	console.log(`destroying session for ${req.session.user.email}`);
+	console.log(`destroying session for ${req.session ? req.session.user.email : 'unknown'}`);
+	cloudSockets.handleLogout(req.session.user, 'id');
 	req.session.destroy(() => {
-		if(req.session.cloud_sockets && req.session.cloud_sockets.ws) {
-			ws.destroy();
-		}
 		res.send({result: 'OK', message: 'Session Destroyed'});
 	});
 });
-// Setup our cloud-sockets middleware
-const wsConfig = {
-	clientTracking: false,
-	noServer: true
-};
-const csOptions = {
-	sessionParser: sessionParser,
-	setupHttpUser: true,
-	sessionUserPropertyName: 'user',
-	includeUserProps: ['shortName']
-};
-// Define the cloud-sockets middleware after all your other middleware
-const cloudSockets = require('../../index');
-app.use(cloudSockets.socketServer(wsConfig, csOptions));
-server.on('upgrade', cloudSockets.handleHttpServerUpgrade);
 
 // Startup the express server
 server.listen(3000, () => {
