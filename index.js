@@ -88,7 +88,7 @@ let channelMgr;
  * @param {any} cloudWsOptions
  * @returns {function(...[*]=)}
  */
-module.exports.socketServer = function socketServer(serverConfig, cloudWsOptions) {
+exports.socketServer = function socketServer(serverConfig, cloudWsOptions) {
 	wsConfig.server = serverConfig ? serverConfig.server : global.server;
 	options = {...options, ...cloudWsOptions};
 	wsConfig = {...wsConfig, ...serverConfig};
@@ -98,13 +98,11 @@ module.exports.socketServer = function socketServer(serverConfig, cloudWsOptions
 	channelMgr = new ChannelManager(options);
 	msgDirector = new MessageDirector(options, channelMgr);
 
-	// todo: Need to setup user authentication support
 	setupWsListeners();
 	console.log(`WebSocket server fired up`);
 
 	// Middleware function
 	return function (req, res, next) {
-		console.log('cloud-sockets middleware function');
 		req.cloud_sockets = {
 			msgDirector: msgDirector,
 			channelMgr: channelMgr,
@@ -120,13 +118,48 @@ module.exports.socketServer = function socketServer(serverConfig, cloudWsOptions
  * @param {WebSocket} socket
  * @param {any} head
  */
-module.exports.handleHttpServerUpgrade = function handleHttpServerUpgrade(req, socket, head) {
+exports.handleHttpServerUpgrade = function handleHttpServerUpgrade(req, socket, head) {
 	const {sessionParser} = options;
 	sessionParser(req, {}, () => {
+		if (!req.session[options.sessionUserPropertyName]) {
+			socket.destroy();
+			return;
+		}
 		wsServer.handleUpgrade(req, socket, head, (ws) => {
 			wsServer.emit('connection', ws, req);
 		});
 	});
+};
+
+/**
+ * Should be called from express to destroy a user's WebSocket. Usually used for logout
+ * @param {string|Object} user
+ * @param {string} [userIdPropertyName]
+ */
+exports.handleLogout = function(user, userIdPropertyName) {
+	let userId;
+	if (user && typeof user === 'string') {
+		userId = user;
+	}else if (user && typeof user === 'object' && !Array.isArray(user) && userIdPropertyName) {
+		userId = user[userIdPropertyName];
+	}
+	if (userId) {
+		let ws;
+		for (let [key, val] of connectionsMap) {
+			if (typeof val.user === 'string' && val.user === userId) {
+				ws = key;
+				break;
+			}else if (typeof val.user === 'object' && !Array.isArray(val.user)) {
+				if (val.user[userIdPropertyName] === userId) {
+					ws = key;
+					break;
+				}
+			}
+		}
+		if (ws) {
+			ws.close();
+		}
+	}
 };
 
 /**
@@ -141,7 +174,9 @@ function setupWsListeners() {
 		}
 
 		if (!connectionsMap.has(ws)) {
-			connectionsMap.set(ws, {});
+			connectionsMap.set(ws, {
+				user: req.session ? req.session.user : null
+			});
 			msgDirector.sendMessage(ws, {
 				type: 'welcome',
 				message: 'Welcome to the cloud-sockets WebSocket',

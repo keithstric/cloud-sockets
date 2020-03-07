@@ -125,7 +125,7 @@ class ChannelManager {
 	 * websocket. If a subId is provided, will only cleanup that subscription's connections
 	 * @param {WebSocket} ws
 	 * @param {string} channel
-	 * @param {string} subId?
+	 * @param {string} [subId]
 	 * @returns {{type: string, subId: string, channel: string, removedConnectionCount: number, subscriptionsDeleted: number, channelsDeleted: number}}
 	 */
 	unsubscribeChannel(ws, channel, subId) {
