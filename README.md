@@ -5,7 +5,8 @@ A websocket implementation using [ws](https://www.npmjs.com/package/ws) for node
 * Defined Message types
 * Customizable Message types
 * PubSub support
-* Event Handler
+* Event Handling
+* User notifications
 
 ## Installation
 
@@ -31,8 +32,8 @@ const csOptions = {
 	broadcastMessageTypes: ['broadcast']
 };
 // Middleware implementation
-const socketServer = require('cloud-sockets');
-app.use(socketServer(wsConfig, csOptions))
+const cloudSockets = require('cloud-sockets');
+app.use(cloudSockets.socketServer(wsConfig, csOptions));
 /**
  * @param {string} AddTodo - Channel name. When a channel is subscribed to an event listener with the channel name will be created
  * @param {string} channel - The channel name (i.e. Todo List Name)
@@ -63,7 +64,7 @@ This map provides a way to organize all the server's connections and what channe
 
 #### Event Handler
 
-The event handler is named `global.socketEmitter` and is an `EventEmitter` from the nodejs `events` module. This is your entry point to sending messages from within your application. When a `channel` is subscribed to an event listener for that `channel` is created. Likewise when there are no subscriptions/connections to a `channel` the event listener is removed.
+The event handler is named `global.socketEmitter` and is an `EventEmitter` from the nodejs `events` module. This is your entry point to sending messages from within your application. When a `channel` is subscribed to, an event listener for that `channel` is created. Likewise when there are no subscriptions/connections to a `channel` the event listener is removed.
 
 ### MessageDirector
 
@@ -86,6 +87,7 @@ A message from the client needs to follow a certain structure in order to be han
     * `ack` - An acknowledgement from the client. Must include the `id` from the original message
     * `getInfo` - Provides basic information about the server, connections, channels, subscriptions and messages awaiting acknowledgement
     * `getInfoDetail` - Provides detailed information about the connections, channels, subscriptions and messages awaiting acknowledgement
+    * `notification` - Used for sending notifications to specific users
 * `channel?` - This defines a category of subscriptions
 * `subId?` - This defines an id for a subscription
 * `payload?` - This can be any type of data
@@ -135,7 +137,7 @@ Unsubscribe from a channel subscription.
 
 ### ChannelManager
 
-This class is responsible for managing the channel subscriptions.
+This class is responsible for managing the channel subscriptions and user identification.
 
 #### Channel Maps
 
@@ -149,8 +151,9 @@ const channelMaps = {
 	}
 }
 ```
-
 An example use case for this structure might be: You have a lot of users which may be viewing different parts of an application at the same time and you want to provide real time updates to the lists and items. Lets take a todo app where people can share lists of tasks. You would have a specific list (`channel`) that multiple people might be viewing lists at the same time. When someone adds or changes an item in that list everyone else's display should just update without the need for a refresh. So the list would be the `channel` and a list item would be a `subscription`.
+
+The user map is used to identify a specific user's connections. It is a `Map<string, WebSocket[]` whose key is a `string`. This key is derived from the user object and properties defined in the`includeUserProps` option. The value is a `WebSocket`. The main purpose is to support `@username` type lookups.
 
 ## WebSocket Server Configuration
 
@@ -171,6 +174,9 @@ The following options are available for customization of cloud-sockets.
 * `pubsubSubscriptionName` {string} - The PubSub subscription name
 * `pubsubTopicName` {string} - The PubSub topic name
 * `setupHttpUser` {boolean} - Set to true to add http users who have a cloud-sockets connection
+* `includeUserProps` {string[]} - Properties from the user object to include as identifiers for that user
+* `sessionParser` {any} - [express-session](https://github.com/expressjs/session)
+* `sessionUserPropertyName` {string} - The property in the express request object that contains the user object/id.
 
 ## Custom Message Handlers
 

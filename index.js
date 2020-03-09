@@ -4,17 +4,24 @@ const EventEmitter = require('events').EventEmitter;
 const MessageDirector = require('./MessageDirector');
 const ChannelManager = require('./ChannelManager');
 
+/**
+ * Event emitter for handling events fired from outside application
+ * @type {module:events.EventEmitter.EventEmitter}
+ */
 global.socketEmitter = new EventEmitter();
+
 /**
  * Map of connections. key is a WebSocket, value is an object whose
  * key is a subscribed to channel and value is an array of subscription ids
  * @type {Map<WebSocket, {<channel: string>: string[]}}
  */
 const connectionsMap = new Map();
+
 /**
  * WebSocket server configuration
  */
 let wsConfig = {};
+
 /**
  * default cloud-ws options
  */
@@ -66,16 +73,19 @@ let options = {
 	sessionParser: null,
 	sessionUserPropertyName: 'user'
 };
+
 /**
  * Websocket server
  * @type {WebSocketServer}
  */
 let wsServer;
+
 /**
  * Message director
  * @type {MessageDirector}
  */
 let msgDirector;
+
 /**
  * Channel Manager
  * @type {ChannelManager}

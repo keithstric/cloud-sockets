@@ -10,7 +10,7 @@ app.use(express.urlencoded({extended: true}));
 
 // Define the cloud-sockets middleware after all your other middleware
 const cloudSockets = require('../../index');
-app.use(cloudSockets());
+app.use(cloudSockets.socketServer());
 // Startup the express server
 server.listen(3000, () => {
 	console.log('express listening on port 3000');
