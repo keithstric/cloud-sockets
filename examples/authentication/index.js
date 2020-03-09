@@ -27,12 +27,17 @@ const wsConfig = {
 	clientTracking: false,
 	noServer: true
 };
-// cloud-sockets options
+/**
+ * @property {express-session} sessionParser - The express-session object
+ * @property {boolean} setupHttpUser - Set to true to enable cloud-sockets notifications
+ * @property {string} sessionUserPropertyName - The property name inside request.session that will contain the user
+ * @property {string[]} includeUserProps - The user object properties to use for user lookups (i.e. @username)
+ */
 const csOptions = {
-	sessionParser: sessionParser,
-	setupHttpUser: true,
-	sessionUserPropertyName: 'user',
-	includeUserProps: ['shortName']
+	sessionParser: sessionParser, // The express-session definition
+	setupHttpUser: true, // Enables user setup inside cloud-sockets
+	sessionUserPropertyName: 'user', // Property name in req.session that contains the user object/string
+	includeUserProps: ['shortName'] // User can be found by this property value
 };
 // Define the cloud-sockets middleware after all your other middleware
 const cloudSockets = require('../../index');
