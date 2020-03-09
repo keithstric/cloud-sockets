@@ -88,6 +88,7 @@ A message from the client needs to follow a certain structure in order to be han
     * `getInfo` - Provides basic information about the server, connections, channels, subscriptions and messages awaiting acknowledgement
     * `getInfoDetail` - Provides detailed information about the connections, channels, subscriptions and messages awaiting acknowledgement
     * `notification` - Used for sending notifications to specific users
+    * `broadcast` - Used for sending a message to all connections on the server
 * `channel?` - This defines a category of subscriptions
 * `subId?` - This defines an id for a subscription
 * `payload?` - This can be any type of data

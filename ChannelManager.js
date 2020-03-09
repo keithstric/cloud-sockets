@@ -210,6 +210,7 @@ class ChannelManager {
 	 */
 	getInfoDetail(channel) {
 		let payload = this.getInfo(channel);
+		payload.uniqUserNames = Array.from(this.userMap.keys());
 		payload.channelInfo.channels = {};
 		if (channel) {
 			payload.channelInfo.channels[channel] = this._getChannelInfo(channel);
@@ -232,6 +233,7 @@ class ChannelManager {
 		let payload = {
 			channelInfo: {}
 		};
+		payload.uniqUserNameCount = this.userMap.size;
 		const channels = Object.keys(this.channelMaps);
 		payload.channelInfo.totalConnections = this.getAllConnections().length;
 		payload.channelInfo.totalChannels = channels ? channels.length : 0;

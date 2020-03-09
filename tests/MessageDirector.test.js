@@ -65,6 +65,11 @@ test('it should call the proper method based on a message type', () => {
 	msgDir.handleMsg({}, JSON.stringify(msg));
 	expect(unsubSpy).toHaveBeenCalled();
 	expect(mockSend).toHaveBeenCalled();
+
+	const notifySpy = jest.spyOn(msgDir, 'notifyUser');
+	msg.type = 'notification';
+	msgDir.handleMsg({}, JSON.stringify(msg));
+	expect(notifySpy).toHaveBeenCalled();
 });
 
 test('it should create a uuid', () => {

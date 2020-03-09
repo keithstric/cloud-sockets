@@ -59,6 +59,9 @@ class MessageDirector {
 				case 'notification':
 					this.notifyUser(ws, msg, msg.userTag);
 					break;
+				case 'broadcast':
+					// Do Nothing, handled in index.js. Just don't throw an error
+					break;
 				default:
 					if (msg.type && this.customMsgHandlers && this.customMsgHandlers[msg.type]) {
 						const formattedMsg = this.formatMessage(msg);

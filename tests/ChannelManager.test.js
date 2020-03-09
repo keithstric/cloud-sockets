@@ -15,6 +15,28 @@ test('it should update the channel maps object', () => {
 	expect(channelMgr.channelMaps.test).toBeTruthy();
 });
 
+test('it should update the user map object', () => {
+	channelMgr.setupUser('abc123', mockWs);
+	expect(channelMgr.userMap.size).toEqual(1);
+	expect(channelMgr.userMap.get('abc123')).toBeTruthy();
+	channelMgr.includeUserProps = ['shortname'];
+	channelMgr.setupUser({shortname: 'foo'}, mockWs);
+	expect(channelMgr.userMap.size).toEqual(2);
+	expect(channelMgr.userMap.get('foo')).toBeTruthy();
+});
+
+test('it should return a users connections', () => {
+	channelMgr.setupUser('abc123', mockWs);
+	expect(channelMgr.getUserConnections('abc123')).toBeTruthy();
+	expect(channelMgr.getUserConnections('abc123').length).toBeTruthy();
+});
+
+test('it should be able to determine if someone is online', () => {
+	expect(channelMgr.isUserOnline('abc123')).toBe(false);
+	channelMgr.setupUser('abc123', mockWs);
+	expect(channelMgr.isUserOnline('abc123')).toBe(true);
+});
+
 test('it should retrieve a channel map', () => {
 	channelMgr.setChannelMap('test');
 	expect(channelMgr.getChannelMap('test')).toBeTruthy();

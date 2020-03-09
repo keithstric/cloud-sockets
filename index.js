@@ -207,6 +207,12 @@ function setupWsListeners() {
 			} else if (msg.type === 'getInfo') {
 				const info = getInfo(ws, msg);
 				msgDirector.sendMessage(ws, info);
+			} else if (msg.type === 'broadcast') {
+				wsServer.clients.forEach((ws) => {
+					if (ws.readyState === WebSocket.OPEN) {
+						msgDirector.sendMessage(ws, msg);
+					}
+				});
 			}
 		});
 		ws.on('error', (err) => {
