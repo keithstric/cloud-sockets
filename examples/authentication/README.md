@@ -29,3 +29,17 @@ The following options are provided to enable this scenario:
 	includeUserProps: ['shortName'] // User can be found by this property value
 }
 ```
+
+## Implementation Info
+
+If `setupHttpUser` is `true` then a entry will be created in the `ChannelManager.userMap` Map. This allows messages with a `userTag` property to be sent to the provided user. For example. If a user is logged in that has the following user object in `req.session.user`:
+
+```json
+{
+    "id": "abc123",
+    "email": "the.collector@knowhere.com",
+    "shortName": "the.collector"
+}
+```
+
+Using the option for `includeUserProps` we will add an entry to the `userMap` with a key of "the.collector" and then any message with a `userTag` of "the.collector" will be sent directly to that user. If for whatever reason that user isn't in the `userMap` a message declaring that user is not online will be sent to the original sender.

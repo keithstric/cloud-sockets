@@ -1,4 +1,5 @@
 const MessageDirector = require('../MessageDirector');
+const expect = require('expect');
 
 let msgDir;
 const msg = {
@@ -12,7 +13,7 @@ beforeEach(() => {
 		ackMessageTypes: ['announce'],
 		customMsgHandlers: {},
 		msgResendDelay: 60000
-	}
+	};
 	msgDir = new MessageDirector(options);
 });
 
@@ -95,4 +96,21 @@ test('it should add/remove messages to the awaiting acknowledgement que', () => 
 	msgDir.handleMsg(mockWs, JSON.stringify(msg));
 	expect(removeAwaitSpy).toHaveBeenCalled();
 	expect(msgDir.awaitingAck.size).toEqual(0);
+});
+
+test('it should attempt to use the pubsub publisher (if provided) to notify an offline user', () => {
+	const pubsubPublisher = function() {};
+	let pubSubOptions = {
+		ackMessageTypes: ['announce'],
+		customMsgHandlers: {},
+		msgResendDelay: 60000,
+		pubsubPublisher: pubsubPublisher
+	};
+	msgDir = new MessageDirector(pubSubOptions);
+	const pubsubSpy = jest.spyOn(msgDir, 'pubsubPublisher');
+	const notifySpy = jest.spyOn(msgDir, 'notifyUser');
+	msg.type = 'notification';
+	msgDir.handleMsg({}, JSON.stringify(msg));
+	expect(notifySpy).toHaveBeenCalled();
+	expect(pubsubSpy).toHaveBeenCalled();
 });

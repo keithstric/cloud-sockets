@@ -143,16 +143,21 @@ class MessageDirector {
 		}
 		if (conns.length) {
 			conns.forEach((ws) => {
-				if (ws !== origWs) { // todo: Should we not include the sending connection?
+				if (ws !== origWs) { // todo: Should we include the sending connection?
 					this.sendMessage(ws, msg);
 				}
 			});
 		}else{
-			const notOnlineMsg = {
-				type: 'notification',
-				payload: `User with user tag ${userTag} is not online`
-			};
-			this.sendMessage(origWs, notOnlineMsg);
+			if (this.pubsubPublisher) {
+				// we need to take into account that the user may be on another instance, so if the user is offline and there is a pubsub publisher, we should use that instead
+				this.pubsubPublisher(this, msg); // todo: needs to be tested
+			}else{
+				const notOnlineMsg = {
+					type: 'notification',
+					payload: `User with user tag ${userTag} is not online`
+				};
+				this.sendMessage(origWs, notOnlineMsg);
+			}
 		}
 	}
 
