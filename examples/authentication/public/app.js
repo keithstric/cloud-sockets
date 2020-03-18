@@ -7,7 +7,7 @@
 		const wsSend = document.querySelector('#wsSend')
 
 		function showMessage(message) {
-			messages.textContent = `\n${message}`;
+			messages.textContent += `\n\n*********\n\n${message}`;
 			messages.scrollTop = messages.scrollHeight;
 		}
 
@@ -50,16 +50,20 @@
 
 			ws = new WebSocket(`ws://${location.host}`);
 			ws.onerror = function() {
+				console.log('Error args=', arguments);
 				showMessage('WebSocket error');
 			};
 			ws.onopen = function() {
+				console.log('onopen', arguments);
 				showMessage('WebSocket connection established');
 			};
 			ws.onclose = function() {
+				console.log('onclose', arguments);
 				showMessage('WebSocket connection closed');
 				ws = null;
 			};
 			ws.onmessage = function(msg) {
+				console.log('onmessage', arguments);
 				let dataStr = JSON.stringify(JSON.parse(msg.data), null, 2);
 				dataStr = `Message from WebSocket server:\n${dataStr}`;
 				showMessage(dataStr);
@@ -71,8 +75,9 @@
 				showMessage('No WebSocket connection');
 				return;
 			}else{
+				// Using type of "broadcast" here so that it comes back to us, in all reality you would be using a type set to "notification"
 				const msg = {
-					type: 'notification',
+					type: 'broadcast',
 					payload: 'Hello Knowhere',
 					userTag: 'the.collector'
 				};

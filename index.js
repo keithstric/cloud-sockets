@@ -187,10 +187,20 @@ function setupWsListeners() {
 			connectionsMap.set(ws, {
 				user: req.session ? req.session.user : null
 			});
+			let msgMsg = 'Welcome to the cloud-sockets WebSocket';
+			const connectionObj = connectionsMap.get(ws);
+			if (connectionObj && connectionObj.user) {
+				let userName = connectionObj.email;
+				if (options.includeUserProps.length && !userName) {
+					userName = connectionObj.user[options.includeUserProps[0]];
+				}
+				msgMsg = `Welcome ${userName} to the cloud-sockets WebSocket`;
+			}
 			msgDirector.sendMessage(ws, {
 				type: 'welcome',
-				message: 'Welcome to the cloud-sockets WebSocket',
-				numConnections: connectionsMap.size
+				message: msgMsg,
+				numConnections: connectionsMap.size,
+				numUsers: channelMgr.userMap.size
 			});
 		}
 
@@ -208,11 +218,14 @@ function setupWsListeners() {
 				const info = getInfo(ws, msg);
 				msgDirector.sendMessage(ws, info);
 			} else if (msg.type === 'broadcast') {
-				wsServer.clients.forEach((ws) => {
-					if (ws.readyState === WebSocket.OPEN) {
-						msgDirector.sendMessage(ws, msg);
-					}
+				Array.from(connectionsMap.keys()).forEach((oWs) => {
+					msgDirector.sendMessage(oWs, msg);
 				});
+				// wsServer.clients.forEach((oWs) => {
+					// if (oWs.readyState === WebSocket.OPEN) {
+					// 	msgDirector.sendMessage(oWs, msg);
+					// }
+				// });
 			}
 		});
 		ws.on('error', (err) => {

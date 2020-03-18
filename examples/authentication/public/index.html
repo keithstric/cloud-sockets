@@ -20,12 +20,16 @@
 		.buttonContainer button {
 			margin-right: 10px;
 		}
+		.label {
+			font-weight: 600;
+		}
 	</style>
 </head>
 <body>
 	<h2>cloud-sockets authentication example</h2>
 	<div class="formContainer">
-		<input id="email" type="email" name="email" value="the.collector@knowhere.com">
+		<label for="email" class="label">Email Address</label>
+		<input id="email" type="email" name="email" value="the.collector@knowhere.com" placeholder="Email Address">
 		<div class="buttonContainer">
 			<button id="login" type="button">Simulate Login</button>
 			<button id="logout" type="button">Simulate Logout</button>

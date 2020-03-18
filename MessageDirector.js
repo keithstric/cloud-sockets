@@ -143,7 +143,7 @@ class MessageDirector {
 		}
 		if (conns.length) {
 			conns.forEach((ws) => {
-				if (ws !== origWs) {
+				if (ws !== origWs) { // todo: Should we not include the sending connection?
 					this.sendMessage(ws, msg);
 				}
 			});

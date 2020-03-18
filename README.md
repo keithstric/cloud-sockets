@@ -87,7 +87,7 @@ A message from the client needs to follow a certain structure in order to be han
     * `ack` - An acknowledgement from the client. Must include the `id` from the original message
     * `getInfo` - Provides basic information about the server, connections, channels, subscriptions and messages awaiting acknowledgement
     * `getInfoDetail` - Provides detailed information about the connections, channels, subscriptions and messages awaiting acknowledgement
-    * `notification` - Used for sending notifications to specific users
+    * `notification` - Used for sending notifications to specific users. Only works if authentication is enabled
     * `broadcast` - Used for sending a message to all connections on the server
 * `channel?` - This defines a category of subscriptions
 * `subId?` - This defines an id for a subscription
