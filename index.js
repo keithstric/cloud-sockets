@@ -221,11 +221,6 @@ function setupWsListeners() {
 				Array.from(connectionsMap.keys()).forEach((oWs) => {
 					msgDirector.sendMessage(oWs, msg);
 				});
-				// wsServer.clients.forEach((oWs) => {
-					// if (oWs.readyState === WebSocket.OPEN) {
-					// 	msgDirector.sendMessage(oWs, msg);
-					// }
-				// });
 			}
 		});
 		ws.on('error', (err) => {
