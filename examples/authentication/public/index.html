@@ -5,8 +5,9 @@
 	<title>cloud-sockets authentication example</title>
 	<style>
 		pre {
-			height: 400px;
+			/*height: 400px;*/
 			overflow: scroll;
+			white-space: pre-wrap;
 		}
 		.formContainer {
 			display: flex;
@@ -22,6 +23,9 @@
 		}
 		.label {
 			font-weight: 600;
+		}
+		.message {
+
 		}
 	</style>
 </head>
@@ -39,7 +43,7 @@
 			<button id="wsSend" type="button">Send WebSocket Message</button>
 		</div>
 	</div>
-	<pre id="messages"></pre>
+	<div id="messages"></div>
 	<script src="app.js"></script>
 </body>
 </html>

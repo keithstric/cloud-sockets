@@ -32,7 +32,7 @@ The following options are provided to enable this scenario:
 
 ## Implementation Info
 
-If `setupHttpUser` is `true` then a entry will be created in the `ChannelManager.userMap` Map. This allows messages with a `userTag` property to be sent to the provided user. For example. If a user is logged in that has the following user object in `req.session.user`:
+If `setupHttpUser` is `true` then an entry will be created in the `ChannelManager.userMap` Map. This allows messages with a `userTag` property to be sent to the provided user. For example. If a user is logged in that has the following user object in `req.session.user`:
 
 ```json
 {

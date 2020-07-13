@@ -7,7 +7,10 @@
 		const wsSend = document.querySelector('#wsSend')
 
 		function showMessage(message) {
-			messages.textContent += `\n\n*********\n\n${message}`;
+			// messages.textContent += `\n\n*********\n\n${message}`;
+			const html = `<div class="message"><pre>${message}</pre></div>`
+			const innerHtml = `${messages.innerHTML}${html}`;
+			messages.innerHTML = innerHtml;
 			messages.scrollTop = messages.scrollHeight;
 		}
 
