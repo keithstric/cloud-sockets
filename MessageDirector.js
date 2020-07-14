@@ -53,8 +53,10 @@ class MessageDirector {
 					this.announce(ws, msg, msg.channel, msg.subId);
 					break;
 				case 'getInfo':
+					// Do Nothing, handled in index.js. Just don't throw an error
 					break;
 				case 'getInfoDetail':
+					// Do Nothing, handled in index.js. Just don't throw an error
 					break;
 				case 'notification':
 					this.notifyUser(ws, msg, msg.userTag);

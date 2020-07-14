@@ -4,7 +4,7 @@ This is an example of using express and cloud-sockets with a custom message hand
 
 ## Running
 
-To run this example, run `npm install` from within this directory and then `npm start`. Use your favorite websocket client to connect and send messages.
+To run this example, run `npm install` from within this directory and then `npm start`. Use your favorite websocket client to connect and send messages. It is recommended to use 2 instances of your websocket client in order to receive messages sent.
 
 ## Pertinent Options
 

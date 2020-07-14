@@ -7,6 +7,10 @@ const msg = {
 	channel: 'foo',
 	subId: 'bar'
 };
+let mockWs = {
+	id: 'abc123',
+	send: jest.fn()
+}
 
 beforeEach(() => {
 	const options = {
@@ -17,7 +21,7 @@ beforeEach(() => {
 	msgDir = new MessageDirector(options);
 });
 
-test('It should instantiate an Awaiting Acknowledgement map', () =>{
+test('it should instantiate an Awaiting Acknowledgement map', () =>{
 	expect(msgDir.awaitingAck).toBeTruthy();
 	expect(msgDir.channelMgr).toBeTruthy();
 });
@@ -71,6 +75,25 @@ test('it should call the proper method based on a message type', () => {
 	msg.type = 'notification';
 	msgDir.handleMsg({}, JSON.stringify(msg));
 	expect(notifySpy).toHaveBeenCalled();
+
+	msg.type = 'foo';
+	const errorMsg = {type: 'error', value: `Message type "${msg.type}" not supported`, msg: msg};
+	msgDir.handleMsg(mockWs, JSON.stringify(msg));
+	expect(mockSend).toHaveBeenCalledWith(mockWs, errorMsg);
+
+	msgDir.customMsgHandlers = {'foo': jest.fn()}
+	msg.type = 'foo';
+	const customSpy = jest.spyOn(msgDir.customMsgHandlers, 'foo');
+	msgDir.handleMsg(mockWs, JSON.stringify(msg));
+	expect(customSpy).toHaveBeenCalled();
+
+	msgDir.pubsubPublisher = jest.fn;
+	msgDir.pubsubTopic = 'topic-name';
+	msgDir.pubsubMessageTypes = ['PubSub'];
+	msg.type = 'PubSub';
+	const publisherSpy = jest.spyOn(msgDir, 'pubsubPublisher');
+	msgDir.handleMsg(mockWs, JSON.stringify(msg));
+	expect(publisherSpy).toHaveBeenCalled();
 });
 
 test('it should create a uuid', () => {
@@ -99,18 +122,44 @@ test('it should add/remove messages to the awaiting acknowledgement que', () => 
 });
 
 test('it should attempt to use the pubsub publisher (if provided) to notify an offline user', () => {
-	const pubsubPublisher = function() {};
 	let pubSubOptions = {
 		ackMessageTypes: ['announce'],
 		customMsgHandlers: {},
 		msgResendDelay: 60000,
-		pubsubPublisher: pubsubPublisher
+		pubsubPublisher: jest.fn
 	};
 	msgDir = new MessageDirector(pubSubOptions);
 	const pubsubSpy = jest.spyOn(msgDir, 'pubsubPublisher');
 	const notifySpy = jest.spyOn(msgDir, 'notifyUser');
 	msg.type = 'notification';
-	msgDir.handleMsg({}, JSON.stringify(msg));
+	msgDir.handleMsg(mockWs, JSON.stringify(msg));
 	expect(notifySpy).toHaveBeenCalled();
 	expect(pubsubSpy).toHaveBeenCalled();
+});
+
+test('it should attempt to notify a user', () => {
+	let options = {
+		ackMessageTypes: [],
+		setupHttpUser: true,
+		includeUserProps: ['email'],
+		pubsubPublisher: jest.fn,
+		pubSubtopic: 'topic-name',
+		pubsubMessageTypes: ['PubSub']
+	}
+	msgDir = new MessageDirector(options);
+	const getUserConnsSpy = jest.spyOn(msgDir.channelMgr, 'getUserConnections')
+		.mockImplementation(() => [Object.assign({}, mockWs)]);
+	const sendSpy = jest.spyOn(msgDir, 'sendMessage');
+	msgDir.notifyUser(mockWs, msg, 'joe@knowhere.com');
+	expect(getUserConnsSpy).toHaveBeenCalled();
+	expect(sendSpy).toHaveBeenCalled();
+});
+
+test('it should return information about itself', () => {
+	const info = msgDir.getInfo();
+	expect(info).toBeTruthy();
+	expect(info.messageInfo).toBeTruthy();
+	msgDir._addAwaitingAck(mockWs, msg);
+	const infoDetail = msgDir.getInfoDetail();
+	expect(infoDetail.messageInfo.awaitingMessages).toBeTruthy();
 });

@@ -102,9 +102,7 @@ exports.socketServer = function socketServer(serverConfig, cloudWsOptions) {
 	wsConfig.server = serverConfig ? serverConfig.server : global.server;
 	options = {...options, ...cloudWsOptions};
 	wsConfig = {...wsConfig, ...serverConfig};
-	wsServer = new WsServer(wsConfig, function() {
-		console.log('cloud-sockets:index.js, new WsServer callback', arguments);
-	});
+	wsServer = new WsServer(wsConfig, null);
 	channelMgr = new ChannelManager(options);
 	msgDirector = new MessageDirector(options, channelMgr);
 

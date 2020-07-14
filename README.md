@@ -54,7 +54,7 @@ The basis behind cloud-sockets is to provide a robust WebSocket Server implement
 * Channel - This is an organization type where a channel is a category with sub-categories. A channel will have an event listener created to handle messages spawning from an event. It also provides a means for messages to find their target(s).
 * Subscription - This would be a sub-category of a channel. It would probably be an id of some kind. This is an array of `WebSocket` connections.
 * Message - This is an object that will be passed between WebSocket Server, PubSub and Client. It must follow the interface defined for a message for all of this to function properly.
-* Acknowledgement - Some message types require acknowledgement from the client that it was received. Messages that require acknowledgement will be resent for a certain amount of time until an acknowledgement is received
+* Acknowledgement - Some message types may require acknowledgement from the client that it was received. Messages that require acknowledgement will be resent for a certain amount of time until an acknowledgement is received
 
 ### WebSocket Middleware
 
