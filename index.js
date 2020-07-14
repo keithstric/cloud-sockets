@@ -249,7 +249,7 @@ function cleanupConnections(ws, connObj) {
 			acks.push(channelMgr.unsubscribeChannel(ws, channel));
 			const channelConns = channelMgr.getChannelConnections(channel);
 			if (!channelConns || !channelConns.length) {
-				global.socketEmitter.removeListener(channel, eventHandler);
+				socketEmitter.removeListener(channel, eventHandler);
 			}
 		});
 	}
@@ -296,7 +296,7 @@ function onUnsubscribe(ws, msg) {
 		}
 		const channelConns = channelMgr.getChannelConnections(channel);
 		if (channelConns && !channelConns.length) {
-			global.socketEmitter.removeListener(channel, eventHandler);
+			socketEmitter.removeListener(channel, eventHandler);
 		}
 	}
 }
@@ -326,7 +326,7 @@ function getInfo(ws, msg) {
 		type: 'getInfo',
 		serverInfo: {
 			port: wsServer.address.port,
-			eventEmitterListeners: global.socketEmitter.eventNames(),
+			eventEmitterListeners: socketEmitter.eventNames(),
 			customPubSub: !!(options.pubsubListener && options.pubsubPublisher),
 			options: {...options, customMsgHandlers: Object.keys(options.customMsgHandlers)}
 		},

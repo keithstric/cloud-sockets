@@ -41,6 +41,7 @@ typings/
 # temp files
 .DS_Store
 Thumbs.db
+coverage/
 
 # keyfile
 *local-dev-us-xplore-dev.json*

@@ -79,3 +79,14 @@ test('it should call the eventHandler upon receiving an event', () => {
 	expect(hasListener).toBe(true);
 	expect(mockEventHandler).toHaveBeenCalled();
 });
+
+test('it should cleanup connections', () => {
+	const cleanup = app.__get__('cleanupConnections');
+	const onSub = app.__get__('onSubscribe');
+	const connMap = app.__get__('connectionsMap');
+	msg.type = 'subscribe';
+	onSub(mockWs, msg);
+	const connObj = connMap.get(mockWs);
+	cleanup(mockWs, connObj);
+	expect(global.socketEmitter.listenerCount()).toBe(0);
+});
