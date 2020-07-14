@@ -18,15 +18,15 @@ const pubSubFunctions = require('./cloud-sockets-impl');
  * @property {string[]} pubsubMessageTypes - The types of messages to send through pubsub
  */
 const socketOptions = {
-	pubsubListener: pubSubFunctions.gcloudPubsubListener,
-	pubsubPublisher: pubSubFunctions.gcloudPubsubPublisher,
+	pubsubListener: pubSubFunctions.listenForPubSubMessages,
+	pubsubPublisher: pubSubFunctions.publishPubSubMessages,
 	pubsubTopicName: 'some-topic-name',
 	pubSubSubscriptionName: 'api-service',
 	pubsubMessageTypes: ['announceEvent']
 };
 // Define the cloud-sockets middleware after all your other middleware
-const socketServer = require('../../index');
-global.server.use(socketServer({server: global.server, port: 8080}, socketOptions));
+const cloudSockets = require('../../index');
+global.server.use(cloudSockets.socketServer({server: global.server, port: 8080}, socketOptions));
 // Startup the express server
 global.server.listen(3000, () =>{
 	console.log(`gcloud-pubsub example listening on port 3000`);

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>cloud-sockets authentication example</title>
+	<style>
+		pre {
+			max-height: 400px;
+			overflow: auto;
+			white-space: pre-wrap;
+		}
+		.formContainer {
+			display: flex;
+			flex-direction: column;
+			margin-bottom: 10px;
+		}
+		.buttonContainer {
+			display: flex;
+			flex-direction: row;
+			margin-top: 10px;
+		}
+		.buttonContainer button {
+			margin-right: 10px;
+		}
+		.label {
+			font-weight: 600;
+		}
+		.message {
+			border: 1px solid #afafaf;
+			border-radius: 5px;
+			margin-bottom: 10px;
+		}
+		.message.http {
+			background-color: beige;
+		}
+		.message.from {
+			background-color: lightgreen;
+		}
+		.message.to {
+			background-color: lightgoldenrodyellow;
+		}
+		.message.error {
+			background-color: lightsalmon;
+		}
+		.message.status {
+			background-color: lightskyblue;
+		}
+	</style>
+</head>
+<body>
+	<h2>cloud-sockets authentication example</h2>
+	<div class="formContainer">
+		<label for="email" class="label">Email Address</label>
+		<input id="email" type="email" name="email" value="the.collector@knowhere.com" placeholder="Email Address">
+		<div class="buttonContainer">
+			<button id="login" type="button">Simulate Login</button>
+			<button id="logout" type="button">Simulate Logout</button>
+		</div>
+		<div class="buttonContainer">
+			<button id="wsConnect" type="button">Open WebSocket connection</button>
+			<button id="wsSend" type="button">Send WebSocket Message</button>
+			<button id="wsClear" type="button">Clear Messages</button>
+		</div>
+	</div>
+	<div id="messages"></div>
+	<script src="app.js"></script>
+</body>
+</html>

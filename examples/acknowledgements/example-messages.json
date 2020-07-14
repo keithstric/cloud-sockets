@@ -1,0 +1,31 @@
+[{
+		"type": "subscribe",
+		"channel": "test-channel",
+		"subId": "test-sub1"
+	},{
+		"type": "announce",
+		"channel": "test-channel",
+		"payload": "This is a test announce to an entire channel. Should be acknowledged"
+	},{
+		"type": "announce",
+		"channel": "test-channel",
+		"subId": "test-sub1",
+		"payload": "This is a test announce to subscription test-sub1"
+	},{
+		"type": "broadcast",
+		"payload": "This is a test broadcast to all connections"
+	},{
+		"type": "announce",
+		"payload": "This is a test announce to all connections, basically the same as broadcast without channel and subId"
+	},{
+		"type": "unsubscribe",
+		"channel": "test-channel",
+		"subId": "test-sub1"
+	},{
+		"type": "getInfo"
+	},{
+		"type": "getInfoDetail",
+		"channel": "test-channel",
+		"subId": "test-sub1"
+	}
+]

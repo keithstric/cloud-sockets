@@ -4,17 +4,24 @@ const EventEmitter = require('events').EventEmitter;
 const MessageDirector = require('./MessageDirector');
 const ChannelManager = require('./ChannelManager');
 
+/**
+ * Event emitter for handling events fired from outside application
+ * @type {module:events.EventEmitter.EventEmitter}
+ */
 global.socketEmitter = new EventEmitter();
+
 /**
  * Map of connections. key is a WebSocket, value is an object whose
  * key is a subscribed to channel and value is an array of subscription ids
  * @type {Map<WebSocket, {<channel: string>: string[]}}
  */
 const connectionsMap = new Map();
+
 /**
  * WebSocket server configuration
  */
 let wsConfig = {};
+
 /**
  * default cloud-ws options
  */
@@ -62,39 +69,48 @@ let options = {
 	 */
 	msgResendDelay: 60000,
 	setupHttpUser: false,
-	includeUserProps: []
+	includeUserProps: [],
+	sessionParser: null,
+	sessionUserPropertyName: 'user'
 };
+
 /**
  * Websocket server
- * @type {Server}
+ * @type {WebSocketServer}
  */
 let wsServer;
+
 /**
  * Message director
  * @type {MessageDirector}
  */
 let msgDirector;
+
 /**
  * Channel Manager
  * @type {ChannelManager}
  */
 let channelMgr;
 
-module.exports = function socketServer(serverConfig, cloudWsOptions) {
+/**
+ * Sets up the WebSocket server and all required modules
+ * @param {any} serverConfig
+ * @param {any} cloudWsOptions
+ * @returns {function(...[*]=)}
+ */
+exports.socketServer = function socketServer(serverConfig, cloudWsOptions) {
 	wsConfig.server = serverConfig ? serverConfig.server : global.server;
 	options = {...options, ...cloudWsOptions};
 	wsConfig = {...wsConfig, ...serverConfig};
-	wsServer = new WsServer(wsConfig);
+	wsServer = new WsServer(wsConfig, null);
 	channelMgr = new ChannelManager(options);
 	msgDirector = new MessageDirector(options, channelMgr);
-
-	// todo: Need to setup user authentication support
 
 	setupWsListeners();
 	console.log(`WebSocket server fired up`);
 
 	// Middleware function
-	return function(req, res, next) {
+	return function (req, res, next) {
 		req.cloud_sockets = {
 			msgDirector: msgDirector,
 			channelMgr: channelMgr,
@@ -102,18 +118,87 @@ module.exports = function socketServer(serverConfig, cloudWsOptions) {
 		};
 		next();
 	}
-}
+};
+
+/**
+ * Should be called from express as the http server upgrade event function.
+ * @param {Request} req
+ * @param {WebSocket} socket
+ * @param {any} head
+ */
+exports.handleHttpServerUpgrade = function handleHttpServerUpgrade(req, socket, head) {
+	const {sessionParser} = options;
+	sessionParser(req, {}, () => {
+		if (!req.session[options.sessionUserPropertyName]) {
+			socket.destroy();
+			return;
+		}
+		wsServer.handleUpgrade(req, socket, head, (ws) => {
+			wsServer.emit('connection', ws, req);
+		});
+	});
+};
+
+/**
+ * Should be called from express to destroy a user's WebSocket. Usually used for logout
+ * @param {string|Object} user
+ * @param {string} [userIdPropertyName]
+ */
+exports.handleLogout = function(user, userIdPropertyName) {
+	let userId;
+	if (user && typeof user === 'string') {
+		userId = user;
+	}else if (user && typeof user === 'object' && !Array.isArray(user) && userIdPropertyName) {
+		userId = user[userIdPropertyName];
+	}
+	if (userId) {
+		let ws;
+		for (let [key, val] of connectionsMap) {
+			if (typeof val.user === 'string' && val.user === userId) {
+				ws = key;
+				break;
+			}else if (typeof val.user === 'object' && !Array.isArray(val.user)) {
+				if (val.user[userIdPropertyName] === userId) {
+					ws = key;
+					break;
+				}
+			}
+		}
+		if (ws) {
+			ws.close();
+		}
+	}
+};
+
 /**
  * Sets up the socket server event listeners
  */
 function setupWsListeners() {
+	const {sessionParser, setupHttpUser, sessionUserPropertyName} = options;
+
 	wsServer.on('connection', (ws, req) => {
+		if (setupHttpUser && req && req.session && req.session[sessionUserPropertyName]) {
+			channelMgr.setupUser(req.session[sessionUserPropertyName], ws);
+		}
+
 		if (!connectionsMap.has(ws)) {
-			connectionsMap.set(ws, {});
+			connectionsMap.set(ws, {
+				user: req.session ? req.session.user : null
+			});
+			let msgMsg = 'Welcome to the cloud-sockets WebSocket';
+			const connectionObj = connectionsMap.get(ws);
+			if (connectionObj && connectionObj.user) {
+				let userName = connectionObj.email;
+				if (options.includeUserProps.length && !userName) {
+					userName = connectionObj.user[options.includeUserProps[0]];
+				}
+				msgMsg = `Welcome ${userName} to the cloud-sockets WebSocket`;
+			}
 			msgDirector.sendMessage(ws, {
 				type: 'welcome',
-				message: 'Welcome to the cloud-sockets WebSocket',
-				numConnections: connectionsMap.size
+				message: msgMsg,
+				numConnections: connectionsMap.size,
+				numUsers: channelMgr.userMap.size
 			});
 		}
 
@@ -122,14 +207,18 @@ function setupWsListeners() {
 			const msg = JSON.parse(message);
 			if (msg.type === 'subscribe') {
 				onSubscribe(ws, msg);
-			}else if (msg.type === 'unsubscribe') {
+			} else if (msg.type === 'unsubscribe') {
 				onUnsubscribe(ws, msg);
-			}else if (msg.type === 'getInfoDetail') {
+			} else if (msg.type === 'getInfoDetail') {
 				const info = getInfoDetail(ws, msg);
 				msgDirector.sendMessage(ws, info);
-			}else if (msg.type === 'getInfo') {
+			} else if (msg.type === 'getInfo') {
 				const info = getInfo(ws, msg);
 				msgDirector.sendMessage(ws, info);
+			} else if (msg.type === 'broadcast') {
+				Array.from(connectionsMap.keys()).forEach((oWs) => {
+					msgDirector.sendMessage(oWs, msg);
+				});
 			}
 		});
 		ws.on('error', (err) => {
@@ -148,6 +237,7 @@ function setupWsListeners() {
 		subscription.on('message', pubsubHandler);
 	}
 }
+
 /**
  * Cleans up the connections after an error or close connection
  */
@@ -159,11 +249,12 @@ function cleanupConnections(ws, connObj) {
 			acks.push(channelMgr.unsubscribeChannel(ws, channel));
 			const channelConns = channelMgr.getChannelConnections(channel);
 			if (!channelConns || !channelConns.length) {
-				global.socketEmitter.removeListener(channel, eventHandler);
+				socketEmitter.removeListener(channel, eventHandler);
 			}
 		});
 	}
 }
+
 /**
  * Adds subscriptions to the connection object for the provided WebSocket
  * @param {WebSocket} ws
@@ -175,13 +266,14 @@ function onSubscribe(ws, msg) {
 		const connObj = connectionsMap.get(ws) || {};
 		if (connObj && connObj[channel]) {
 			connObj[channel] = [...connObj[channel], subId];
-		}else{
+		} else {
 			connObj[channel] = [subId]
 		}
 		connectionsMap.set(ws, connObj);
 		createEventListener(channel);
 	}
 }
+
 /**
  * Removes subscriptions from the connection object for the provided WebSocket
  * @param {WebSocket} ws
@@ -197,17 +289,18 @@ function onUnsubscribe(ws, msg) {
 				if (subIdx > -1) {
 					connObj[channel].splice(subIdx, 1);
 				}
-			}else{
+			} else {
 				delete connObj[channel];
 			}
 			connectionsMap.set(ws, connObj);
 		}
 		const channelConns = channelMgr.getChannelConnections(channel);
 		if (channelConns && !channelConns.length) {
-			global.socketEmitter.removeListener(channel, eventHandler);
+			socketEmitter.removeListener(channel, eventHandler);
 		}
 	}
 }
+
 /**
  * Gathers information from the MessageHandler and ChannelManager then
  * includes information about the configuration and connections
@@ -222,6 +315,7 @@ function getInfoDetail(ws, msg) {
 	info = {...info, ...channelMgr.getInfoDetail(msg.channel)};
 	return info;
 }
+
 /**
  * Gathers basic information
  * @param {WebSocket} ws
@@ -232,7 +326,7 @@ function getInfo(ws, msg) {
 		type: 'getInfo',
 		serverInfo: {
 			port: wsServer.address.port,
-			eventEmitterListeners: global.socketEmitter.eventNames(),
+			eventEmitterListeners: socketEmitter.eventNames(),
 			customPubSub: !!(options.pubsubListener && options.pubsubPublisher),
 			options: {...options, customMsgHandlers: Object.keys(options.customMsgHandlers)}
 		},
@@ -244,6 +338,7 @@ function getInfo(ws, msg) {
 	info = {...info, ...channelMgr.getInfo()};
 	return info;
 }
+
 /**
  * Creates an event listener for the defined type. Type comes from the
  * subscription message from the client.
@@ -255,6 +350,7 @@ function createEventListener(channel) {
 		socketEmitter.addListener(channel, eventHandler);
 	}
 }
+
 /**
  * Event handler to send messages. These parameters should be provided
  * by the emit call
@@ -273,6 +369,7 @@ function eventHandler(channel, subId, type, payload) {
 	};
 	msgDirector.handleMsg(null, message);
 }
+
 /**
  * Handles messages from PubSub
  * @param {Message} message
