@@ -21,10 +21,12 @@ class MessageDirector {
 			this.pubsubPublisher = options.pubsubPublisher;
 			this.pubsubTopic = options.pubsubTopicName;
 			this.pubsubMessageTypes = options.pubsubMessageTypes;
+			this.sendAnnounceMsgsToSelf = options.sendAnnounceMsgsToSelf;
+			this.abandonAfterRetriesCount = options.abandonAfterRetriesCount;
 		}
 		this.channelMgr = channelMgr || new ChannelManager(options);
 		/**
-		 * @type {Map<WebSocket, <subId: string>[]>}
+		 * @type {Map<WebSocket, string[]>}
 		 */
 		this.awaitingAck = new Map();
 	}
@@ -126,7 +128,7 @@ class MessageDirector {
 			conns = this.channelMgr.getAllConnections();
 		}
 		conns.forEach((ws) => {
-			if (ws !== origWs) {
+			if ((this.sendAnnounceMsgsToSelf && ws === origWs) || msg.sendToSender === true || ws !== origWs) {
 				this.sendMessage(ws, msg);
 			}
 		});
@@ -224,6 +226,24 @@ class MessageDirector {
 	}
 
 	/**
+	 * Retry to send a message. This function is what is called from the awaiting object stored
+	 * in the awaitingAck map
+	 * @param {WebSocket} ws
+	 * @param {any} msg
+	 */
+	sendRetry(ws, msg) {
+		if (msg && ws) {
+			msg.isRetry = true;
+			msg.retryCount = msg.retryCount >= 0 ? msg.retryCount + 1 : 1;
+			if (this.abandonAfterRetriesCount > 0 && msg.retryCount >= this.abandonAfterRetriesCount) {
+				msg.abandoned = true;
+				this._removeAwaitingAck(ws, msg);
+			}
+			this.sendMessage(ws, msg);
+		}
+	}
+
+	/**
 	 * Add a message to the awaitingAck object
 	 * @param {WebSocket} ws
 	 * @param {any} msg
@@ -232,14 +252,13 @@ class MessageDirector {
 		if (ws && msg) {
 			const awaitingObj = {
 				timer: setInterval(() => {
-					msg.isRetry = true;
-					this.sendMessage(ws, msg);
+					this.sendRetry(ws, msg);
 				}, this.awaitingRetryDelay),
-				msg: msg
+				msg: {...msg, retryCount: 0}
 			}
 			let wsMsgs = [awaitingObj];
 			if (this.awaitingAck.has(ws)) {
-				wsMsgs = this.awaitingAck.get(ws);
+				wsMsgs = [...wsMsgs, ...this.awaitingAck.get(ws)];
 			}
 			this.awaitingAck.set(ws, wsMsgs);
 		}

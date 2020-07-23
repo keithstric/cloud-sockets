@@ -1,0 +1,77 @@
+html, body {
+	overflow: hidden;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+}
+.content {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	padding: 10px;
+	box-sizing: border-box;
+}
+pre {
+	max-height: 400px;
+	overflow: auto;
+	white-space: pre-wrap;
+}
+.formContainer {
+	display: flex;
+	flex-direction: column;
+	margin-bottom: 10px;
+	box-sizing: border-box;
+}
+.formContainer .fieldContainer {
+	display: flex;
+	flex-direction: row;
+}
+.fieldContainer textarea {
+	flex-grow: 1;
+	margin-right: 10px;
+}
+.fieldContainer .buttonContainer {
+	display: flex;
+	flex-direction: column;
+	margin-top: 0;
+	justify-content: center;
+}
+.fieldContainer .buttonContainer button {
+	margin-bottom: 5px;
+}
+.buttonContainer {
+	display: flex;
+	flex-direction: row;
+	margin-top: 10px;
+}
+.buttonContainer button {
+	margin-right: 10px;
+}
+.label {
+	font-weight: 600;
+}
+.messageContainer {
+	overflow: auto;
+	box-sizing: border-box;
+}
+.message {
+	border: 1px solid #afafaf;
+	border-radius: 5px;
+	margin-bottom: 10px;
+	padding: 10px;
+}
+.message.http {
+	background-color: beige;
+}
+.message.from {
+	background-color: lightgreen;
+}
+.message.to {
+	background-color: lightgoldenrodyellow;
+}
+.message.error {
+	background-color: lightsalmon;
+}
+.message.status {
+	background-color: lightskyblue;
+}

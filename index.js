@@ -64,14 +64,42 @@ let options = {
 	pubsubSubscriptionName: null,
 	/**
 	 * The number of milliseconds to wait before attempting to resend
-	 * a message that requires acknowledgement
+	 * a message that requires acknowledgement. Default is 60000 (1 minute)
 	 * @type {number}
 	 */
 	msgResendDelay: 60000,
+	/**
+	 * Set to true to add http users who have a cloud-sockets connection
+	 * @type {boolean}
+	 */
 	setupHttpUser: false,
+	/**
+	 * Properties from the user object to include as identifiers for that user
+	 * @type {string[]}
+	 */
 	includeUserProps: [],
 	sessionParser: null,
-	sessionUserPropertyName: 'user'
+	/**
+	 * The property in the express request object that contains the user object/id.
+	 * @type {string}
+	 */
+	sessionUserPropertyName: 'user',
+	/**
+	 * by default, "announce" messages are not sent to the sender. Set this to true to enable
+	 * "announce" messages to be sent to user globally.
+	 * @type {boolean}
+	 */
+	sendAnnounceMsgsToSelf: false,
+	/**
+	 * Number of retries before a message is abandoned and removed from awaiting acknowledgement. Set to 0
+	 * to not abandon messages. Be aware this may cause an issue where messages are being sent to people who
+	 * maybe are no longer interested in receiving them, have left the company or have shut down their computer.
+	 *
+	 * The default of 60 will basically retry sending for an hour and then abandon the message. This number does not
+	 * count the initial send of the message
+	 * @type {number}
+	 */
+	abandonAfterRetriesCount: 60
 };
 
 /**
@@ -179,6 +207,8 @@ function setupWsListeners() {
 	wsServer.on('connection', (ws, req) => {
 		if (setupHttpUser && req && req.session && req.session[sessionUserPropertyName]) {
 			channelMgr.setupUser(req.session[sessionUserPropertyName], ws);
+		}else if (setupHttpUser && req.session && !req.session[sessionUserPropertyName]) {
+			console.warn(`The sessionUserPropertyName (${sessionUserPropertyName}) was not found in request.session! User mappings not setup.`);
 		}
 
 		if (!connectionsMap.has(ws)) {

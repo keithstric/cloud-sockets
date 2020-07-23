@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>cloud-sockets acknowledgement example</title>
+	<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+	<div class="content">
+		<h2>cloud-sockets acknowledgement example</h2>
+		<div class="formContainer">
+			<label for="messageField" class="label">Message (JSON)</label>
+			<div class="fieldContainer">
+				<textarea id="messageField" rows="7"></textarea>
+				<div class="buttonContainer">
+					<button type="button" id="wsSubscribe">Subscribe Msg</button>
+					<button type="button" id="wsAnnounce">Announce Msg</button>
+					<button type="button" id="wsAck">Acknowledge Msg</button>
+					<button type="button" id="wsUnsubscribe">Unsubscribe Msg</button>
+				</div>
+			</div>
+			<div class="buttonContainer">
+				<button id="wsConnect" type="button">Open WebSocket connection</button>
+				<button id="wsSend" type="button">Send WebSocket Message</button>
+				<button id="wsClear" type="button">Clear Messages</button>
+				<button id="wsDetails" type="button">Get Info Detail</button>
+			</div>
+		</div>
+		<div id="messages" class="messageContainer"></div>
+	</div>
+	<script src="app.js"></script>
+</body>
+</html>

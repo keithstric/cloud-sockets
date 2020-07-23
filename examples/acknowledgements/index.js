@@ -8,10 +8,15 @@ global.server = http.createServer(app);
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 
+// Setup static site and sessionParser middleware
+app.use(express.static('public'));
+
 // Setup your acknowledgement message types
 const socketOptions = {
-	ackMessageTypes: ['announce']
-}
+	ackMessageTypes: ['announce'],
+	msgResendDelay: 10000,
+	abandonAfterRetriesCount: 6
+};
 
 // Define the cloud-sockets middleware after all your other middleware
 const cloudSockets = require('../../index');
