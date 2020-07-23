@@ -13,7 +13,7 @@ global.socketEmitter = new EventEmitter();
 /**
  * Map of connections. key is a WebSocket, value is an object whose
  * key is a subscribed to channel and value is an array of subscription ids
- * @type {Map<WebSocket, {<channel: string>: string[]}}
+ * @type {Map<WebSocket, any[]>}
  */
 const connectionsMap = new Map();
 
@@ -35,7 +35,7 @@ let options = {
 	 * custom message handlers. key is the message type, value is the handler function
 	 * the handler function will receive 2 properties, the WebSocket and message. If
 	 * an acknowledgement is required, be sure your function returns a message
-	 * @type {key: {string}, value: {function}}
+	 * @type {any}
 	 */
 	customMsgHandlers: {},
 	/**
@@ -124,7 +124,7 @@ let channelMgr;
  * Sets up the WebSocket server and all required modules
  * @param {any} serverConfig
  * @param {any} cloudWsOptions
- * @returns {function(...[*]=)}
+ * @returns {function}
  */
 exports.socketServer = function socketServer(serverConfig, cloudWsOptions) {
 	wsConfig.server = serverConfig ? serverConfig.server : global.server;

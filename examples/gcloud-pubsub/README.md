@@ -4,7 +4,7 @@ This is an example using express and cloud-sockets with a PubSub provider. You c
 
 ## Running
 
-Since this is using Google Cloud PubSub, the Google Cloud SDK is required along with a service account, etc. which is beyond the scope of this example. So, I just included the implementation details and not a fully functioning example. It is a pure assumption that other PubSub providers would use similar information and setup. If something is required for different PubSub providers, please open an [issue](https://github.com/keithstric/cloud-sockets/issues) and I will implement it.
+Since this is using Google Cloud PubSub, the Google Cloud SDK is required along with a service account, etc. which is beyond the scope of this example. So, I just included the implementation details and not a fully functioning example. It is a pure assumption that other PubSub providers would use similar information and setup. If something is required for different PubSub providers, please open an [issue](https://github.com/keithstric/cloud-sockets/issues) and I will implement it or submit a pull request with an implementation and I will merge it.
 
 ## Pertinent Options
 

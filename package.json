@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "jest": "^25.1.0",
+    "jsdoc": "^3.6.5",
     "rewire": "^4.0.1"
   }
 }

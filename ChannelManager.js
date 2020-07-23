@@ -10,7 +10,7 @@ class ChannelManager {
 	constructor(options) {
 		/**
 		 * Channel maps
-		 * @type {{[key: string]: Map<string, WebSocket[]>}}
+		 * @type {any}
 		 */
 		this.channelMaps = {};
 		/**
@@ -206,7 +206,7 @@ class ChannelManager {
 	 * If there is no `channel` property in the msg, then it will return connection info
 	 * for all channels.
 	 * @param {string} channel?
-	 * @returns {type: string, {[<key: string>], {subId: string, numConnections: number}[]}}
+	 * @returns {any}
 	 */
 	getInfoDetail(channel) {
 		let payload = this.getInfo(channel);
@@ -227,7 +227,7 @@ class ChannelManager {
 	 * Will provide the connection information for a specific channel or all channels.
 	 * If there is no `channel` property in the msg, then it will return connection info
 	 * for all channels.
-	 * @returns {type: string, {[<key: string>], {subId: string, numConnections: number}[]}}
+	 * @returns {any}
 	 */
 	getInfo() {
 		let payload = {
