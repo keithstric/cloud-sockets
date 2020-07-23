@@ -41,7 +41,7 @@ app.use(cloudSockets.socketServer(wsConfig, csOptions));
  * @param {string} type - The message type
  * @param {any} payload - Your data goes here
  */
-global.socketEmitter.emit('AddTodo', 'todoList1234', 'todo1234', 'announce' {
+global.socketEmitter.emit('AddTodo', 'todoList1234', 'todo1234', 'announce', {
 	subject: 'New todo',
 	text: 'This is a new todo item description'
 });
@@ -93,6 +93,7 @@ A message from the client needs to follow a certain structure in order to be han
 * `subId?` - This defines an id for a subscription
 * `payload?` - This can be any type of data
 * `pubsubId?` - This is added to a message received via the pubsub
+* `sendToSender?` - Set to true to send the message to the sender. Default behavior is to NOT send a message to the sender
 * `id` - This is automatically added to every message sent by cloud-sockets
 * `sentDateTime` - This is automatically added to every message sent by cloud-sockets
 
@@ -164,18 +165,19 @@ The WebSocket server is [ws](https://www.npmjs.com/package/ws) behind the scenes
 
 The following options are available for customization of cloud-sockets.
 
+* `abandonAfterRetriesCount` {number} - Default = 60. Number of times to retry sending a message which requires acknowledgement
 * `ackMessageTypes` {string[]} - An array of message types which will require an acknoledgement from the client upon receipt
 * `broadcastMessageTypes` {string[]} - An array of message types that should send a message to all connections
 * `customMsgHandlers` {{string, function}} - An object whose key is a message type and value is a function. You may not define a custom handler for any of the default message types. The function will receive 3 arguments: The initiating WebSocket, the message and the instance of the MessageDirector.
-* `includeUserProps` - If setupHttpUser is true, this must be defined. Is an array of properties found in the user object at `request.session.user`
-* `msgResendDelay` {number} - Number of milliseconds to wait before resending a message awaiting acknowledgement
+* `includeUserProps` {string[]} - If setupHttpUser is true. Properties from the user object to include as identifiers for that user
+* `msgResendDelay` {number} - Default = 60000. Number of milliseconds to wait before resending a message awaiting acknowledgement
 * `pubsubListener` {function} - Listener function for your PubSub provider
 * `pubsubMessageTypes` {string[]} - Array of message types that should be sent through the PubSub topic
 * `pubsubPublisher` {function} - Function for publishing to your PubSub provider
 * `pubsubSubscriptionName` {string} - The PubSub subscription name
 * `pubsubTopicName` {string} - The PubSub topic name
+* `sendAnnounceMsgstoSelf` {boolean} - Set to true to globally enable `announce` messages to be sent to the sender
 * `setupHttpUser` {boolean} - Set to true to add http users who have a cloud-sockets connection
-* `includeUserProps` {string[]} - Properties from the user object to include as identifiers for that user
 * `sessionParser` {any} - [express-session](https://github.com/expressjs/session)
 * `sessionUserPropertyName` {string} - The property in the express request object that contains the user object/id.
 
