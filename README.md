@@ -4,9 +4,10 @@ A websocket implementation using [ws](https://www.npmjs.com/package/ws) for node
 
 * Defined Message types
 * Customizable Message types
-* PubSub support
-* Event Handling
+* PubSub support for scaling
+* Event Driven
 * User notifications
+* Message Acknowledgement Support
 
 ## Installation
 
@@ -35,7 +36,8 @@ const csOptions = {
 const cloudSockets = require('cloud-sockets');
 app.use(cloudSockets.socketServer(wsConfig, csOptions));
 /**
- * @param {string} AddTodo - Channel name. When a channel is subscribed to an event listener with the channel name will be created
+ * Every channel gets an event listener created upon creation. Emitting a properly formatted event will result in a WS message being sent
+ * @param {string} Channel name - When a channel is subscribed to an event listener with the channel name will be created
  * @param {string} channel - The channel name (i.e. Todo List Name)
  * @param {string} subId,- The ID of a todo list item
  * @param {string} type - The message type
@@ -47,14 +49,14 @@ global.socketEmitter.emit('AddTodo', 'todoList1234', 'todo1234', 'announce', {
 });
 ```
 
-## Architecture
+## Overview
 
 The basis behind cloud-sockets is to provide a robust WebSocket Server implementation that allows customization, PubSub Usage and message acknowledgement support. There are a few terms that you should be aware of and the theory around those terms which will be used in this documentation.
 
 * Channel - This is an organization type where a channel is a category with sub-categories. A channel will have an event listener created to handle messages spawning from an event. It also provides a means for messages to find their target(s).
 * Subscription - This would be a sub-category of a channel. It would probably be an id of some kind. This is an array of `WebSocket` connections.
 * Message - This is an object that will be passed between WebSocket Server, PubSub and Client. It must follow the interface defined for a message for all of this to function properly.
-* Acknowledgement - Some message types may require acknowledgement from the client that it was received. Messages that require acknowledgement will be resent for a certain amount of time until an acknowledgement is received
+* Acknowledgement - Some message types may require acknowledgement from the client that it was received. Messages that require acknowledgement will be resent for a certain amount of time until an acknowledgement is received or the defined `abandonAfterRetriesCount` option has been reached
 
 ### WebSocket Middleware
 
@@ -64,7 +66,16 @@ This map provides a way to organize all the server's connections and what channe
 
 #### Event Handler
 
-The event handler is named `global.socketEmitter` and is an `EventEmitter` from the nodejs `events` module. This is your entry point to sending messages from within your application. When a `channel` is subscribed to, an event listener for that `channel` is created. Likewise when there are no subscriptions/connections to a `channel` the event listener is removed.
+The event handler is named `global.socketEmitter` and is an `EventEmitter` from the nodejs `events` module. This is your entry point to sending messages from within your application. When a `channel` is subscribed to, an event listener for that `channel` is created. Likewise when there are no subscriptions/connections to a `channel` the event listener is removed. When emitting an event follow the below defined pattern:
+
+```javascript
+// This is your custom object or whatever. Do not include a full message with channel and subId.
+const payload = {
+  subject: 'Abc 123',
+  text: 'Abc 123 Text'
+}
+global.socketEmitter.emit('<ChannelName>', '<ChannelName>', '<SubId>', payload);
+```
 
 ### MessageDirector
 
@@ -80,11 +91,11 @@ A message from the client needs to follow a certain structure in order to be han
 
 ##### Message Properties
 
-* `type` - This is required to determine how the message should be handled. There are 6 different types
+* `type` - This is required to determine how the message should be handled. There are 6 different default message types
     * `subscribe` - Subscribes to a subscription. Requires the `channel` and `subId` properties to be defined
     * `unsubscribe` - Unsubscribes from a subscription. If no `channel` or `subId` is provided will unsubscribe the user from all subscriptions. If a `channel` is provided with no `subId` will unsubscribe from all subscriptions in the provided channel. If a `channel` and `subId` are provided will unsubscribe from just that subscription
     * `announce` - Sends a message to connections based on the properties provided. If no `channel` is provided will send to ALL connections. If a `channel` is provided with no `subId` will send to all connections for that `channel`. If a `channel` and `subId` is provided will send to all connections that are a part of that subscription.
-    * `ack` - An acknowledgement from the client. Must include the `id` from the original message
+    * `ack` - An acknowledgement from the client or server. Must include the `id` from the original message
     * `getInfo` - Provides basic information about the server, connections, channels, subscriptions and messages awaiting acknowledgement
     * `getInfoDetail` - Provides detailed information about the connections, channels, subscriptions and messages awaiting acknowledgement
     * `notification` - Used for sending notifications to specific users. Only works if authentication is enabled
@@ -148,12 +159,12 @@ The channel map is used to organize which channels and subscriptions a connectio
 ```javascript
 // Channel Maps structure
 const channelMaps = {
-	channelName: { // this is actually a map, not an object
+	channelName: { // this is actually a Map, not an object
 		subscriptionId: [ws]
 	}
 }
 ```
-An example use case for this structure might be: You have a lot of users which may be viewing different parts of an application at the same time and you want to provide real time updates to the lists and items. Lets take a todo app where people can share lists of tasks. You would have a specific list (`channel`) that multiple people might be viewing lists at the same time. When someone adds or changes an item in that list everyone else's display should just update without the need for a refresh. So the list would be the `channel` and a list item would be a `subscription`.
+An example use case for this structure might be: You have a lot of users which may be viewing different parts of an application at the same time and you want to provide real time updates to the lists and items. Lets take a todo app where people can share lists of tasks. You would have a specific list (`channel`) that multiple people might be viewing at the same time. When someone adds or changes an item in that list everyone else's display should just update without the need for a refresh. So the list would be the `channel` and a list item would be a `subscription`.
 
 The user map is used to identify a specific user's connections. It is a `Map<string, WebSocket[]` whose key is a `string`. This key is derived from the user object and properties defined in the`includeUserProps` option. The value is a `WebSocket`. The main purpose is to support `@username` type lookups.
 
@@ -166,7 +177,7 @@ The WebSocket server is [ws](https://www.npmjs.com/package/ws) behind the scenes
 The following options are available for customization of cloud-sockets.
 
 * `abandonAfterRetriesCount` {number} - Default = 60. Number of times to retry sending a message which requires acknowledgement
-* `ackMessageTypes` {string[]} - An array of message types which will require an acknoledgement from the client upon receipt
+* `ackMessageTypes` {string[]} - An array of message types which will require an acknowledgement from the client upon receipt to stop send retries
 * `broadcastMessageTypes` {string[]} - An array of message types that should send a message to all connections
 * `customMsgHandlers` {{string, function}} - An object whose key is a message type and value is a function. You may not define a custom handler for any of the default message types. The function will receive 3 arguments: The initiating WebSocket, the message and the instance of the MessageDirector.
 * `includeUserProps` {string[]} - If setupHttpUser is true. Properties from the user object to include as identifiers for that user
@@ -177,67 +188,13 @@ The following options are available for customization of cloud-sockets.
 * `pubsubSubscriptionName` {string} - The PubSub subscription name
 * `pubsubTopicName` {string} - The PubSub topic name
 * `sendAnnounceMsgstoSelf` {boolean} - Set to true to globally enable `announce` messages to be sent to the sender
-* `setupHttpUser` {boolean} - Set to true to add http users who have a cloud-sockets connection
+* `setupHttpUser` {boolean} - Set to true to map http users who have a cloud-sockets connection
 * `sessionParser` {any} - [express-session](https://github.com/expressjs/session)
 * `sessionUserPropertyName` {string} - The property in the express request object that contains the user object/id.
 
 ## Custom Message Handlers
 
 You can define custom message handlers in the cloud-sockets options. These allow you to add your own logic to certain message types. The function provided will be passed 3 arguments: The originating WebSocket, the message and the current instance of the MessageDirector. You can see an example in the [custom-handler examples](http://github.com/keithstric/cloud-sockets/tree/master/examples/custom-handler).
-
-## Process flow
-
-The entire process of a connection is as follows:
-
-1. Client connects to server
-2. Server sends a Welcome message to new connection
-3. Client sends a `subscribe` message to `channel` "todoList1234" and `subId` "todo1234"
-4. Message is handed off to the `MessageDirector` which notifies the `ChannelManager`
-5. The ChannelManager adds channel "todoList1234" to the channel maps
-6. The ChannelManager adds the senders connection to the connections for subscription with id "todo1234" (see Example A below)
-7. Server creates an event listener for event "todoList1234"
-8. MessageDirector sends a message back to client with a type of `ack`
-9. A message of type `announce` is received with `channel` "todoList1234" and `subId` "todo1234"
-10. Message is handed off to the `MessageDirector`
-11. `MessageDirector` adds `id` and `sentDateTime` properties to the message
-12. The message director checks for the `channel` and `subId` properties on the message
-    1. Has `channel` and `subId` properties - Sends to that specific subscription
-    2. Has `channel` property and no `subId` property - Sends to all connections for supplied channel
-    3. No `channel` or `subId` properties - Send to all connections
-13. Message director adds the message to the `Awaiting Acknowledgement` que for each connection the message is sent to (only if message `type` is in the `ackMessageTypes` array in the cloud-sockets options) (see Example B below)
-    1. Message is resent based on the cloud-sockets options `msgResendDelay` property until an acknowledgement is received
-    2. Client sends message to server with type `ack` and an `id` that matches the `announce` message `id`
-    3. Server hands message off to the `MessageDirector`
-    4. The message director clears the timer for resending the message and removes the message from that connection's awaiting acknowledgement messages
-14. Client sends `unsubscribe` message to `channel` "todoList1234"
-15. Server hands message to the `ChannelManager`
-16. Channel manager removes the connection from all subscriptions for the "todoList1234" channel
-17. Server updates the connections map channels/subscriptions
-18. Client disconnects from server
-19. Server notifies the `ChannelManager` which removes the disconnected connection from all subscriptions and cleans up any empty subscriptions and channels
-20. Server removes the "todoList1234" event listener
-21. Server removes connection from the connections map
-
-**Example A**
-```javascript
-// I know that the value of "channelMgr.todoList1234" does not match that of a map, but it's the closest visual que I could add to demonstrate that structure
-const channelMgr = {
-	todoList1234: {
-		todo1234: [ws]
-	}
-}
-```
-
-**Example B**
-```javascript
-// I know that the value of "awaitingAck" does not match that of a map, but it's the closest visual que I could add to demonstrate that structure
-const awaitingAck = {
-	ws: [{
-		timer: setInterval(() => {...}, options.msgResendDelay),
-		msg: {...msg}
-	}]
-}
-```
 
 ## How to contribute
 

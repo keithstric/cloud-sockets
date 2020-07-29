@@ -1,0 +1,19 @@
+<!-- Loading spinner -->
+<div *ngIf="loading" class="loading-container flex flex-content-center">
+  <mat-progress-spinner
+    color="primary"
+    mode="indeterminate">
+  </mat-progress-spinner>
+</div>
+<!-- App -->
+<div class="site-container">
+  <div class="site-header">
+		<!-- container for the header which can be changed based on page via HeaderService.setHeader method -->
+    <ng-container *ngComponentOutlet="headerComponent"></ng-container>
+  </div>
+  <div class="site-content">
+    <router-outlet></router-outlet>
+  </div>
+</div>
+
+

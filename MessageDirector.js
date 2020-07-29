@@ -39,7 +39,7 @@ class MessageDirector {
 	 */
 	handleMsg(ws, message) {
 		if (message) {
-			const msg = JSON.parse(message);
+			const msg = typeof message === 'string' ? JSON.parse(message) : message;
 			const {type} = msg;
 			switch (type) {
 				case 'subscribe':

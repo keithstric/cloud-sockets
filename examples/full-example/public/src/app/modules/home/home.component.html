@@ -1,0 +1,40 @@
+<div class="todo-container">
+	<div class="todo-header flex-row flex-content-end">
+		<button
+			mat-button
+			mat-raised-button
+			*ngIf="!connected"
+			(click)="connectWebsocket()"
+			title="Connect to cloud-sockets Server">
+			<mat-icon>swap_horiz</mat-icon>
+		</button>
+		<button mat-button mat-raised-button (click)="helpClick()" type="button" title="Show Help Dialog">
+			<mat-icon>help</mat-icon>
+		</button>
+		<button mat-button mat-raised-button (click)="socketInfoClick()" type="button" title="Get Socket Server Info">
+			<mat-icon>info</mat-icon>
+		</button>
+		<button mat-button mat-raised-button (click)="fetchTodos()" type="button" title="Refresh Todo List">
+			<mat-icon>replay</mat-icon>
+		</button>
+		<button mat-button mat-raised-button (click)="addButtonClick()" type="button" title="Add a Todo">
+			<mat-icon>add</mat-icon>
+		</button>
+	</div>
+	<div *ngIf="!todos || !todos.length" class="flex-column flex-content-center">
+		<h1 class="no-items">Yay! Nothing To Do!</h1>
+		<h2 class="no-items-sub">Try adding a todo task</h2>
+	</div>
+	<div *ngIf="todos && todos.length" class="todo-list-container flex-column">
+		<app-card *ngFor="let todo of todos" [cardTitle]="todo.subject" [cardSubTitle]="'id: ' + todo.id" (click)="todoCardClick(todo)">
+			<div content>
+				{{todo.text}}
+			</div>
+			<div actions class="todo-actions-container flex-row flex-content-end">
+				<button mat-button (click)="deleteTodoClick($event, todo)" type="button" title="Delete Todo">
+					<mat-icon>delete</mat-icon>
+				</button>
+			</div>
+		</app-card>
+	</div>
+</div>
