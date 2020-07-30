@@ -13,6 +13,6 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.17.1",
-    "express-json-file-crud": "0.0.5"
+    "express-json-file-crud": "0.0.6"
   }
 }
