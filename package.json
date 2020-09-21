@@ -6,6 +6,9 @@
   "scripts": {
     "test": "jest"
   },
+  "jest": {
+    "testPathIgnorePatterns": ["/examples/"]
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/keithstric/cloud-sockets"
